@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scout — Recherche d'influenceurs TikTok</title>
+<style>
+  :root{
+    --bg: #121317;
+    --panel: #1a1c22;
+    --panel-2: #21232b;
+    --border: #2c2f38;
+    --text: #ece9e3;
+    --muted: #8b8d98;
+    --cyan: #2fe6df;
+    --pink: #fe2c55;
+    --green: #4ade80;
+    --amber: #f5b34c;
+    --radius: 10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;}
+  body{padding:32px 24px 80px;}
+  .wrap{max-width:1080px;margin:0 auto;}
+
+  .brand{display:flex;align-items:baseline;gap:10px;margin-bottom:6px;}
+  .brand .mark{width:11px;height:11px;border-radius:3px;
+    background:linear-gradient(135deg,var(--cyan),var(--pink));flex:none;}
+  .brand h1{font-size:22px;font-weight:800;letter-spacing:-0.02em;margin:0;}
+  .brand span{color:var(--muted);font-size:13px;}
+  .subtitle{color:var(--muted);font-size:14px;margin:0 0 28px;max-width:640px;line-height:1.5;}
+
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px;margin-bottom:20px;}
+  .panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+    margin:0 0 14px;font-weight:700;}
+
+  .row{display:flex;gap:12px;flex-wrap:wrap;}
+  .field{flex:1;min-width:180px;display:flex;flex-direction:column;gap:6px;}
+  .field label{font-size:12px;color:var(--muted);}
+  input[type=text],input[type=password],input[type=number],select{
+    background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    padding:10px 12px;border-radius:8px;font-size:14px;width:100%;outline:none;
+  }
+  input:focus,select:focus{border-color:var(--cyan);}
+  .hint{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;}
+  .hint a{color:var(--cyan);}
+
+  button{cursor:pointer;border:none;border-radius:8px;font-weight:700;font-size:14px;
+    padding:11px 18px;transition:opacity .15s;}
+  button:hover{opacity:.88;}
+  button:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-primary{background:linear-gradient(135deg,var(--cyan),#1fb8c9);color:#0a1112;}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+
+  .actions{display:flex;justify-content:flex-end;margin-top:16px;gap:10px;}
+
+  .status{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);
+    padding:14px 0;}
+  .spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);
+    border-top-color:var(--cyan);animation:spin .8s linear infinite;flex:none;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .error{background:rgba(254,44,85,.1);border:1px solid rgba(254,44,85,.35);color:#ffb3c1;
+    padding:12px 14px;border-radius:8px;font-size:13px;margin-top:14px;line-height:1.5;}
+
+  .filters{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  thead th{text-align:left;color:var(--muted);font-weight:600;font-size:11px;
+    text-transform:uppercase;letter-spacing:.05em;padding:0 10px 10px;border-bottom:1px solid var(--border);}
+  th.num,td.num{text-align:right;}
+  tbody tr{border-bottom:1px solid var(--border);}
+  tbody tr:hover{background:var(--panel-2);}
+  tbody td{padding:12px 10px;vertical-align:middle;}
+  .creator{display:flex;align-items:center;gap:10px;}
+  .avatar{width:34px;height:34px;border-radius:50%;background:var(--panel-2);
+    object-fit:cover;flex:none;border:1px solid var(--border);}
+  .cname{font-weight:700;}
+  .cname a{color:var(--text);text-decoration:none;}
+  .cname a:hover{color:var(--cyan);}
+  .chandle{color:var(--muted);font-size:12px;}
+  .pill{display:inline-block;padding:3px 9px;border-radius:99px;font-size:12px;font-weight:700;}
+  .pill.hi{background:rgba(74,222,128,.15);color:var(--green);}
+  .pill.mid{background:rgba(245,179,76,.15);color:var(--amber);}
+  .pill.lo{background:rgba(139,141,152,.15);color:var(--muted);}
+
+  .empty{text-align:center;padding:50px 20px;color:var(--muted);font-size:14px;}
+  .count{color:var(--muted);font-size:12.5px;margin-bottom:12px;}
+  footer{color:var(--muted);font-size:12px;text-align:center;margin-top:30px;line-height:1.6;}
+  footer a{color:var(--cyan);}
+
+  /* ---- classement / repertoire ---- */
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+  .legend-item{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none;}
+  .dot.green{background:var(--green);}
+  .dot.yellow{background:var(--amber);}
+  .dot.red{background:var(--pink);}
+  .dot.grey{background:#4b4d57;}
+
+  .tierbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+  .tierbtn{background:var(--panel-2);border:1px solid var(--border);color:var(--muted);
+    padding:7px 13px;border-radius:99px;font-size:12.5px;font-weight:700;cursor:pointer;}
+  .tierbtn.active{color:var(--text);border-color:var(--cyan);}
+  .tierbtn .dot{display:inline-block;margin-right:6px;vertical-align:-1px;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+  .card{background:var(--panel-2);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px;border-left:4px solid #4b4d57;}
+  .card.green{border-left-color:var(--green);}
+  .card.yellow{border-left-color:var(--amber);}
+  .card.red{border-left-color:var(--pink);}
+  .card.grey{border-left-color:#4b4d57;opacity:.55;}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px;}
+  .card .creator{margin-bottom:0;}
+  .badge{font-size:11px;font-weight:800;padding:4px 10px;border-radius:99px;white-space:nowrap;}
+  .badge.green{background:rgba(74,222,128,.15);color:var(--green);}
+  .badge.yellow{background:rgba(245,179,76,.15);color:var(--amber);}
+  .badge.red{background:rgba(254,44,85,.15);color:#ff8fa3;}
+  .badge.grey{background:rgba(139,141,152,.15);color:var(--muted);}
+
+  .stats-mini{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin:12px 0;font-size:12.5px;}
+  .stats-mini div span{display:block;color:var(--muted);font-size:11px;}
+  .stats-mini div b{font-size:14px;}
+
+  .checklist{display:flex;flex-direction:column;gap:6px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);}
+  .check-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);}
+  .check-item .ico{width:16px;height:16px;border-radius:50%;flex:none;display:flex;align-items:center;
+    justify-content:center;font-size:10px;font-weight:900;}
+  .check-item .ico.ok{background:rgba(74,222,128,.18);color:var(--green);}
+  .check-item .ico.ko{background:rgba(254,44,85,.15);color:#ff8fa3;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brand"><div class="mark"></div><h1>Scout</h1><span>recherche d'influenceurs TikTok</span></div>
+  <p class="subtitle">Cherche des comptes par mot-clé, récupère leurs statistiques, calcule leur taux d'engagement et filtre automatiquement les meilleurs profils.</p>
+
+  <div class="panel">
+    <h2>Connexion</h2>
+    <div class="row">
+      <div class="field">
+        <label for="token">Clé API Apify</label>
+        <input type="password" id="token" placeholder="apify_api_...">
+        <div class="hint">Récupère ta clé dans Apify Console → Settings → Integrations. Gratuite à l'inscription, non stockée : à ressaisir à chaque session.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Recherche</h2>
+    <div class="row">
+      <div class="field" style="flex:2;">
+        <label for="keyword">Mots-clés / hashtags (séparés par une virgule)</label>
+        <input type="text" id="keyword" placeholder="ex : cuisine vegan, #fitness, tech...">
+      </div>
+      <div class="field" style="max-width:160px;">
+        <label for="perpage">Vidéos à analyser</label>
+        <input type="number" id="perpage" value="30" min="10" max="100">
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="runBtn" onclick="runSearch()">Lancer la recherche</button>
+    </div>
+    <div id="statusZone"></div>
+  </div>
+
+  <div class="panel" id="resultsPanel" style="display:none;">
+    <h2>Critères de classement</h2>
+    <div class="filters">
+      <div class="field" style="max-width:170px;">
+        <label>Followers min.</label>
+        <input type="number" id="cFollowers" value="5000" min="0" oninput="renderTable()">
+      </div>
+      <div class="field" style="max-width:170px;">
+        <label>Engagement min. (%)</label>
+        <input type="number" id="cEngagement" value="3" min="0" step="0.1" oninput="renderTable()">
+      </div>
+      <div class="field" style="max-width:170px;">
+        <label>Trier par</label>
+        <select id="sortBy" onchange="renderTable()">
+          <option value="score">Classement (score)</option>
+          <option value="engagement">Taux d'engagement</option>
+          <option value="followers">Nombre de followers</option>
+          <option value="views">Vues moyennes</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="dot green"></div>Vert — coche les 2 critères</div>
+      <div class="legend-item"><div class="dot red"></div>Rouge — coche 1/2</div>
+      <div class="legend-item"><div class="dot grey"></div>Gris — coche 0/2</div>
+    </div>
+  </div>
+
+  <div class="panel" id="tablePanel" style="display:none;">
+    <h2>Répertoire des influenceurs</h2>
+    <div class="tierbar" id="tierbar">
+      <button class="tierbtn active" data-tier="all" onclick="setTier('all')">Tous</button>
+      <button class="tierbtn" data-tier="green" onclick="setTier('green')"><span class="dot green"></span>Parfait</button>
+      <button class="tierbtn" data-tier="red" onclick="setTier('red')"><span class="dot red"></span>Moyen</button>
+      <button class="tierbtn" data-tier="grey" onclick="setTier('grey')"><span class="dot grey"></span>Faible</button>
+    </div>
+    <div class="count" id="countLabel"></div>
+    <div class="actions" style="margin:0 0 14px;">
+      <button class="btn-ghost" onclick="exportCSV()">Exporter en CSV</button>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <footer>
+    Données publiques récupérées via un service tiers (Apify / TikTok Scraper). Usage personnel — vérifie les conditions d'utilisation de TikTok avant un usage commercial ou à grande échelle.
+  </footer>
+</div>
+
+<script>
+let rawCreators = []; // {id, name, handle, avatar, url, followers, avgViews, avgLikes, engagement, sampled}
+
+function fmt(n){
+  if(n === null || n === undefined || isNaN(n)) return '—';
+  if(n >= 1000000) return (n/1000000).toFixed(1).replace('.0','')+'M';
+  if(n >= 1000) return (n/1000).toFixed(1).replace('.0','')+'k';
+  return String(Math.round(n));
+}
+
+function setStatus(html){
+  document.getElementById('statusZone').innerHTML = html;
+}
+
+async function runSearch(){
+  const token = document.getElementById('token').value.trim();
+  const rawKeywords = document.getElementById('keyword').value.trim();
+  const keywords = rawKeywords.split(',').map(k => k.trim().replace(/^#/, '')).filter(Boolean);
+  const perPage = parseInt(document.getElementById('perpage').value) || 30;
+  const btn = document.getElementById('runBtn');
+
+  if(!token){ setStatus('<div class="error">Ajoute ta clé API Apify avant de lancer une recherche.</div>'); return; }
+  if(keywords.length === 0){ setStatus('<div class="error">Entre au moins un mot-clé ou hashtag à rechercher.</div>'); return; }
+
+  btn.disabled = true;
+  document.getElementById('resultsPanel').style.display = 'none';
+  document.getElementById('tablePanel').style.display = 'none';
+  setStatus(`<div class="status"><div class="spinner"></div>Recherche en cours sur TikTok pour ${keywords.length} terme(s) (${keywords.join(', ')}) — ça peut prendre 30s à 3 min selon le volume...</div>`);
+
+  try{
+    const url = `https://api.apify.com/v2/acts/clockworks~tiktok-scraper/run-sync-get-dataset-items?token=${encodeURIComponent(token)}`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        searchQueries: keywords,
+        resultsPerPage: perPage,
+        shouldDownloadVideos: false,
+        shouldDownloadCovers: false,
+        shouldDownloadSubtitles: false,
+        shouldDownloadSlideshowImages: false
+      })
+    });
+
+    if(!resp.ok){
+      const t = await resp.text();
+      throw new Error(`Erreur API (${resp.status}) : ${t.slice(0,200)}`);
+    }
+
+    const items = await resp.json();
+    if(!Array.isArray(items) || items.length === 0){
+      setStatus('<div class="error">Aucun résultat renvoyé. Essaie un mot-clé différent, ou vérifie que ta clé API est valide et créditée.</div>');
+      btn.disabled = false;
+      return;
+    }
+
+    rawCreators = aggregateByCreator(items);
+    btn.disabled = false;
+
+    if(rawCreators.length === 0){
+      setStatus('<div class="error">Les données ont bien été reçues mais aucun profil n\'a pu être identifié — le format de réponse a peut-être changé côté Apify.</div>');
+      return;
+    }
+
+    setStatus(`<div class="status">✓ ${rawCreators.length} créateur(s) trouvé(s) à partir de ${items.length} vidéo(s) analysée(s).</div>`);
+    document.getElementById('resultsPanel').style.display = 'block';
+    document.getElementById('tablePanel').style.display = 'block';
+    renderTable();
+
+  }catch(err){
+    btn.disabled = false;
+    setStatus(`<div class="error">Échec de la requête : ${err.message}<br><br>Vérifie : (1) que la clé API est correcte, (2) que ton compte Apify a des crédits, (3) ta connexion réseau. Si l'erreur mentionne CORS, l'appel direct depuis le navigateur est bloqué et il faudra passer par un petit serveur relais.</div>`);
+  }
+}
+
+function getField(obj, paths){
+  for(const p of paths){
+    const parts = p.split('.');
+    let v = obj;
+    for(const part of parts){ v = v?.[part]; if(v === undefined) break; }
+    if(v !== undefined && v !== null) return v;
+  }
+  return null;
+}
+
+function aggregateByCreator(items){
+  const map = new Map();
+
+  for(const it of items){
+    const id = getField(it, ['authorMeta.id','author.id','authorMeta.uid','author.uniqueId']) 
+             || getField(it, ['authorMeta.name','author.uniqueId','authorMeta.uniqueId']);
+    if(!id) continue;
+
+    const handle = getField(it, ['authorMeta.name','authorMeta.uniqueId','author.uniqueId']) || id;
+    const displayName = getField(it, ['authorMeta.nickName','authorMeta.nickname','author.nickname']) || handle;
+    const avatar = getField(it, ['authorMeta.avatar','author.avatarThumb','authorMeta.avatarThumb']);
+    const followers = Number(getField(it, ['authorMeta.fans','authorMeta.followerCount','author.stats.followerCount']) || 0);
+    const plays = Number(getField(it, ['playCount','stats.playCount']) || 0);
+    const likes = Number(getField(it, ['diggCount','stats.diggCount']) || 0);
+    const comments = Number(getField(it, ['commentCount','stats.commentCount']) || 0);
+    const shares = Number(getField(it, ['shareCount','stats.shareCount']) || 0);
+
+    if(!map.has(id)){
+      map.set(id, {
+        id, handle, displayName, avatar,
+        url: `https://www.tiktok.com/@${handle}`,
+        followers, plays: [], likes: [], comments: [], shares: [], sampled: 0
+      });
+    }
+    const c = map.get(id);
+    c.followers = Math.max(c.followers, followers);
+    if(plays) c.plays.push(plays);
+    c.likes.push(likes);
+    c.comments.push(comments);
+    c.shares.push(shares);
+    c.sampled += 1;
+  }
+
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+
+  const out = [];
+  for(const c of map.values()){
+    const avgViews = avg(c.plays);
+    const avgLikes = avg(c.likes);
+    const avgComments = avg(c.comments);
+    const avgShares = avg(c.shares);
+    let engagement, basis;
+    if(avgViews > 0){
+      engagement = ((avgLikes + avgComments + avgShares) / avgViews) * 100;
+      basis = 'views';
+    } else if(c.followers > 0){
+      engagement = ((avgLikes + avgComments + avgShares) / c.followers) * 100;
+      basis = 'followers';
+    } else {
+      engagement = 0; basis = 'n/a';
+    }
+    out.push({
+      id: c.id, handle: c.handle, displayName: c.displayName, avatar: c.avatar, url: c.url,
+      followers: c.followers, avgViews, avgLikes, avgComments, engagement, basis, sampled: c.sampled
+    });
+  }
+  return out;
+}
+
+let activeTier = 'all';
+function setTier(t){
+  activeTier = t;
+  document.querySelectorAll('.tierbtn').forEach(b => b.classList.toggle('active', b.dataset.tier === t));
+  renderTable();
+}
+
+const TIER_LABEL = {green:'Parfait', yellow:'Bon', red:'Moyen', grey:'Faible'};
+
+// Suivi manuel des 2 points non-automatisables, en mémoire (perdu au rechargement)
+const manualChecks = {}; // id -> { proof: bool, replyTest: bool }
+function getManual(id){
+  if(!manualChecks[id]) manualChecks[id] = { proof: false, replyTest: false };
+  return manualChecks[id];
+}
+function toggleManual(id, key){
+  const m = getManual(id);
+  m[key] = !m[key];
+  renderTable();
+}
+
+function scoreCreator(c, cfg){
+  const checks = [
+    { label: `Followers ≥ ${fmt(cfg.followers)}`, ok: c.followers >= cfg.followers },
+    { label: `Engagement ≥ ${cfg.engagement}%`, ok: c.engagement >= cfg.engagement },
+  ];
+  const passed = checks.filter(x => x.ok).length;
+  const pct = passed / checks.length;
+  let tier;
+  if(pct === 1) tier = 'green';
+  else if(pct >= 0.5) tier = 'red';
+  else tier = 'grey';
+  return { checks, passed, total: checks.length, pct, tier };
+}
+
+function exportCSV(){
+  if(rawCreators.length === 0) return;
+  const cfg = readConfig();
+  const rows = [['Créateur','Handle','URL','Followers','Vues moy.','Likes moy.','Comm. moy.','Engagement %','Score','Tier']];
+  rawCreators.forEach(c => {
+    const s = scoreCreator(c, cfg);
+    rows.push([c.displayName, c.handle, c.url, Math.round(c.followers), Math.round(c.avgViews),
+      Math.round(c.avgLikes), Math.round(c.avgComments), c.engagement.toFixed(2),
+      `${s.passed}/${s.total}`, TIER_LABEL[s.tier]]);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'scout-influenceurs.csv';
+  a.click();
+}
+
+function readConfig(){
+  return {
+    followers: parseFloat(document.getElementById('cFollowers').value) || 0,
+    engagement: parseFloat(document.getElementById('cEngagement').value) || 0,
+  };
+}
+
+function renderTable(){
+  const cfg = readConfig();
+  const sortBy = document.getElementById('sortBy').value;
+
+  let list = rawCreators.map(c => ({ ...c, ...{ _score: scoreCreator(c, cfg) } }));
+
+  if(activeTier !== 'all') list = list.filter(c => c._score.tier === activeTier);
+
+  list.sort((a,b)=>{
+    if(sortBy === 'followers') return b.followers - a.followers;
+    if(sortBy === 'views') return b.avgViews - a.avgViews;
+    if(sortBy === 'engagement') return b.engagement - a.engagement;
+    return b._score.pct - a._score.pct || b.engagement - a.engagement;
+  });
+
+  document.getElementById('countLabel').textContent =
+    `${list.length} créateur(s) affiché(s) sur ${rawCreators.length} trouvé(s)`;
+
+  const grid = document.getElementById('grid');
+  if(list.length === 0){
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1;">Aucun créateur ne correspond à ces critères.</div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(c => {
+    const m = getManual(c.id);
+    return `
+    <div class="card ${c._score.tier}">
+      <div class="card-top">
+        <div class="creator">
+          ${c.avatar ? `<img class="avatar" src="${c.avatar}" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'">` : `<div class="avatar"></div>`}
+          <div>
+            <div class="cname"><a href="${c.url}" target="_blank" rel="noopener">${escapeHtml(c.displayName)}</a></div>
+            <div class="chandle">@${escapeHtml(c.handle)}</div>
+          </div>
+        </div>
+        <span class="badge ${c._score.tier}">${TIER_LABEL[c._score.tier]} · ${c._score.passed}/${c._score.total}</span>
+      </div>
+      <div class="stats-mini">
+        <div><span>Followers</span><b>${fmt(c.followers)}</b></div>
+        <div><span>Vues moy.</span><b>${fmt(c.avgViews)}</b></div>
+        <div><span>Likes moy.</span><b>${fmt(c.avgLikes)}</b></div>
+        <div><span>Engagement</span><b>${c.engagement.toFixed(2)}%</b></div>
+      </div>
+      <div class="checklist">
+        ${c._score.checks.map(ch => `
+          <div class="check-item">
+            <div class="ico ${ch.ok ? 'ok' : 'ko'}">${ch.ok ? '✓' : '✕'}</div>
+            ${ch.label}
+          </div>`).join('')}
+      </div>
+      <div class="checklist">
+        <div class="check-item" style="cursor:pointer;" onclick="toggleManual('${c.id}','proof')">
+          <div class="ico ${m.proof ? 'ok' : 'ko'}">${m.proof ? '✓' : '?'}</div>
+          À vérifier toi-même : captures de 3 campagnes passées demandées
+        </div>
+        <div class="check-item" style="cursor:pointer;" onclick="toggleManual('${c.id}','replyTest')">
+          <div class="ico ${m.replyTest ? 'ok' : 'ko'}">${m.replyTest ? '✓' : '?'}</div>
+          À vérifier toi-même : commenté sa dernière vidéo, audience active
+        </div>
+      </div>
+    </div>
+  `; }).join('');
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+</script>
+</body>
+</html>
