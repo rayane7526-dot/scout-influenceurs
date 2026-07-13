@@ -274,7 +274,7 @@
 
   <div id="view-repertoire" class="view">
     <div class="hero" style="padding-top:28px;">
-      <p>Tous les créateurs trouvés, classés automatiquement : 🟢 Parfait (5k+ followers et 10%+ d'engagement) · 🔴 Moyen (1 des 2 critères) · ⚪ Faible (aucun des 2). Filtre par couleur, trie, et exporte quand tu es prêt.</p>
+      <p>Répertoire cumulatif — chaque recherche ajoute ses nouveaux créateurs sans effacer les précédents, sauvegardé sur cet appareil. 🟢 Parfait (5k+ followers et 10%+ d'engagement) · 🔴 Moyen (1 des 2 critères) · ⚪ Faible (aucun des 2).</p>
     </div>
 
     <div class="stats-strip" id="statsStrip"></div>
@@ -303,6 +303,7 @@
         <span class="count" id="countLabel"></span>
         <button class="btn-ghost btn-sm" onclick="exportCSV()">Exporter CSV</button>
         <button class="btn-ghost btn-sm" onclick="showView('search')">Nouvelle recherche</button>
+        <button class="btn-ghost btn-sm" onclick="resetRepertoire()" title="Effacer tout le répertoire accumulé">🗑️ Réinitialiser</button>
       </div>
     </div>
 
@@ -317,6 +318,60 @@
 <script>
 let rawCreators = [];
 const TOKEN_KEY = 'scout_apify_token';
+const REPO_KEY = 'scout_repertoire_v1';
+let lastNewIds = new Set(); // ids trouvés lors de la dernière recherche (pour le badge 🆕)
+
+function loadRepertoire(){
+  try{
+    const raw = localStorage.getItem(REPO_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+function saveRepertoire(map){
+  try{ localStorage.setItem(REPO_KEY, JSON.stringify(map)); return true; }
+  catch(e){ return false; }
+}
+function resetRepertoire(){
+  if(!confirm('Effacer tout le répertoire accumulé sur cet appareil ? Cette action est irréversible.')) return;
+  try{ localStorage.removeItem(REPO_KEY); }catch(e){}
+  rawCreators = [];
+  lastNewIds = new Set();
+  renderTable();
+  document.getElementById('repCount').style.display = 'none';
+}
+
+function mergeIntoRepertoire(newCreators, searchLabel){
+  const repo = loadRepertoire();
+  lastNewIds = new Set();
+  const now = Date.now();
+  for(const c of newCreators){
+    const existing = repo[c.id];
+    if(!existing){
+      repo[c.id] = { ...c, timesFound: 1, sourceTerms: searchLabel ? [searchLabel] : [],
+        firstSeen: now, lastSeen: now };
+      lastNewIds.add(c.id);
+    } else {
+      // moyenne pondérée par le nombre d'échantillons de chaque passage
+      const w1 = existing.sampled || 1, w2 = c.sampled || 1, wt = w1 + w2;
+      existing.avgViews = (existing.avgViews*w1 + c.avgViews*w2) / wt;
+      existing.avgLikes = (existing.avgLikes*w1 + c.avgLikes*w2) / wt;
+      existing.avgComments = (existing.avgComments*w1 + c.avgComments*w2) / wt;
+      existing.engagement = (existing.engagement*w1 + c.engagement*w2) / wt;
+      existing.followers = Math.max(existing.followers, c.followers);
+      existing.sampled = wt;
+      existing.timesFound = (existing.timesFound || 1) + 1;
+      existing.avatar = c.avatar || existing.avatar;
+      existing.lastSeen = now;
+      if(c.probablyFR !== null) existing.probablyFR = c.probablyFR;
+      if(searchLabel && !existing.sourceTerms.includes(searchLabel)) existing.sourceTerms.push(searchLabel);
+    }
+  }
+  const ok = saveRepertoire(repo);
+  if(!ok){
+    setStatus('<div class="error">⚠️ Le stockage local est plein — le répertoire n\'a pas pu être sauvegardé. Pense à "Réinitialiser le répertoire" pour repartir propre.</div>');
+  }
+  return Object.values(repo);
+}
 
 function forgetToken(){
   try{ localStorage.removeItem(TOKEN_KEY); }catch(e){}
@@ -327,6 +382,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const saved = localStorage.getItem(TOKEN_KEY);
     if(saved) document.getElementById('token').value = saved;
   }catch(e){}
+  const repo = loadRepertoire();
+  rawCreators = Object.values(repo);
+  if(rawCreators.length > 0){
+    document.getElementById('repCount').style.display = 'inline-block';
+    document.getElementById('repCount').textContent = rawCreators.length;
+    renderTable();
+  }
 });
 
 function showView(name){
@@ -399,16 +461,18 @@ async function runSearch(){
       return;
     }
 
-    rawCreators = aggregateByCreator(items);
+    const newCreators = aggregateByCreator(items);
+    const searchLabel = [...keywords, ...hashtags.map(h=>'#'+h), ...profiles.map(p=>'@'+p)].join(', ');
+    rawCreators = mergeIntoRepertoire(newCreators, searchLabel);
     renderKeywordSuggestions(items);
     btn.disabled = false;
 
-    if(rawCreators.length === 0){
+    if(newCreators.length === 0){
       setStatus('<div class="error">Les données ont bien été reçues mais aucun profil n\'a pu être identifié — le format de réponse a peut-être changé côté Apify.</div>');
       return;
     }
 
-    setStatus(`<div class="status">✓ ${rawCreators.length} créateur(s) trouvé(s) à partir de ${items.length} vidéo(s) analysée(s). Direction l'onglet Répertoire →</div>`);
+    setStatus(`<div class="status">✓ ${lastNewIds.size} nouveau(x) créateur(s) ajouté(s) (${rawCreators.length} au total dans ton répertoire). Direction l'onglet Répertoire →</div>`);
     document.getElementById('repCount').style.display = 'inline-block';
     document.getElementById('repCount').textContent = rawCreators.length;
     renderTable();
@@ -591,12 +655,13 @@ function readConfig(){
 function exportCSV(){
   if(rawCreators.length === 0) return;
   const cfg = readConfig();
-  const rows = [['Créateur','Handle','URL','Followers','Vues moy.','Likes moy.','Comm. moy.','Engagement %','Score','Tier']];
+  const rows = [['Créateur','Handle','URL','Followers','Vues moy.','Likes moy.','Comm. moy.','Engagement %','Score','Tier','Trouvé (x)','Termes source','Langue']];
   rawCreators.forEach(c => {
     const s = scoreCreator(c, cfg);
     rows.push([c.displayName, c.handle, c.url, Math.round(c.followers), Math.round(c.avgViews),
       Math.round(c.avgLikes), Math.round(c.avgComments), c.engagement.toFixed(2),
-      `${s.passed}/${s.total}`, TIER_LABEL[s.tier]]);
+      `${s.passed}/${s.total}`, TIER_LABEL[s.tier], c.timesFound || 1,
+      (c.sourceTerms||[]).join(' | '), c.probablyFR===true?'FR':c.probablyFR===false?'Autre':'?']);
   });
   const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
@@ -659,6 +724,7 @@ function renderTable(){
         </div>
         <span class="badge ${c._score.tier}">${TIER_LABEL[c._score.tier]} · ${c._score.passed}/${c._score.total}</span>
       </div>
+      ${lastNewIds.has(c.id) ? '<div class="hint" style="margin:-6px 0 6px;color:var(--cyan);">🆕 Nouveau dans cette recherche</div>' : c.timesFound > 1 ? `<div class="hint" style="margin:-6px 0 6px;">🔁 Retrouvé ${c.timesFound}× dans tes recherches</div>` : ''}
       ${c.probablyFR === true ? '<div class="hint" style="margin:-6px 0 6px;">🇫🇷 Légendes probablement en français</div>' : c.probablyFR === false ? '<div class="hint" style="margin:-6px 0 6px;">🌍 Légendes probablement pas en français</div>' : ''}
       <div class="stats-mini">
         <div><span>Followers</span><b>${fmt(c.followers)}</b></div>
