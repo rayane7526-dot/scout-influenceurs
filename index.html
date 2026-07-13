@@ -155,6 +155,7 @@
     justify-content:center;font-size:9px;font-weight:900;}
   .check-item .ico.ok{background:rgba(74,222,128,.16);color:var(--green);}
   .check-item .ico.ko{background:rgba(254,44,85,.14);color:#ff8fa3;}
+  .check-item .ico.warn{background:rgba(245,179,76,.16);color:var(--amber);}
 
   .chip{background:var(--panel-2);border:1px solid var(--border);color:var(--text);
     padding:7px 13px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;
@@ -362,6 +363,12 @@ function mergeIntoRepertoire(newCreators, searchLabel){
       existing.timesFound = (existing.timesFound || 1) + 1;
       existing.avatar = c.avatar || existing.avatar;
       existing.lastSeen = now;
+      if(c.verified) existing.verified = true;
+      // garde les indicateurs de qualité de la passe la mieux échantillonnée
+      if((c.sampled||0) >= w1){ existing.regularity = c.regularity; }
+      if(c.lastPostTs && (!existing.lastPostTs || c.lastPostTs > existing.lastPostTs)){
+        existing.lastPostTs = c.lastPostTs; existing.daysSincePost = c.daysSincePost; existing.activity = c.activity;
+      }
       if(c.probablyFR !== null) existing.probablyFR = c.probablyFR;
       if(searchLabel && !existing.sourceTerms.includes(searchLabel)) existing.sourceTerms.push(searchLabel);
     }
@@ -512,6 +519,15 @@ function guessFrench(text){
   return fr >= en;
 }
 
+function parseTs(val){
+  if(val === null || val === undefined) return null;
+  if(typeof val === 'number') return val > 2e10 ? val : val * 1000; // secondes -> ms si besoin
+  const n = Number(val);
+  if(!isNaN(n) && String(val).match(/^\d+$/)) return n > 2e10 ? n : n * 1000;
+  const parsed = Date.parse(val);
+  return isNaN(parsed) ? null : parsed;
+}
+
 function aggregateByCreator(items){
   const map = new Map();
   for(const it of items){
@@ -522,19 +538,25 @@ function aggregateByCreator(items){
     const displayName = getField(it, ['authorMeta.nickName','authorMeta.nickname','author.nickname']) || handle;
     const avatar = getField(it, ['authorMeta.avatar','author.avatarThumb','authorMeta.avatarThumb']);
     const followers = Number(getField(it, ['authorMeta.fans','authorMeta.followerCount','author.stats.followerCount']) || 0);
+    const verified = Boolean(getField(it, ['authorMeta.verified','author.verified']));
     const plays = Number(getField(it, ['playCount','stats.playCount']) || 0);
     const likes = Number(getField(it, ['diggCount','stats.diggCount']) || 0);
     const comments = Number(getField(it, ['commentCount','stats.commentCount']) || 0);
     const shares = Number(getField(it, ['shareCount','stats.shareCount']) || 0);
+    const ts = parseTs(getField(it, ['createTimeISO','createTime']));
 
     if(!map.has(id)){
       map.set(id, { id, handle, displayName, avatar, url: `https://www.tiktok.com/@${handle}`,
-        followers, plays: [], likes: [], comments: [], shares: [], sampled: 0, frVotes: 0, langVotes: 0 });
+        followers, verified, plays: [], likes: [], comments: [], shares: [], videoEng: [],
+        sampled: 0, frVotes: 0, langVotes: 0, lastPostTs: null });
     }
     const c = map.get(id);
     c.followers = Math.max(c.followers, followers);
+    if(verified) c.verified = true;
     if(plays) c.plays.push(plays);
     c.likes.push(likes); c.comments.push(comments); c.shares.push(shares);
+    if(plays > 0) c.videoEng.push(((likes+comments+shares)/plays)*100);
+    if(ts && (!c.lastPostTs || ts > c.lastPostTs)) c.lastPostTs = ts;
     c.sampled += 1;
     const text = getField(it, ['text','desc','description']);
     const g = guessFrench(text);
@@ -548,8 +570,25 @@ function aggregateByCreator(items){
     if(avgViews > 0) engagement = ((avgLikes + avgComments + avgShares) / avgViews) * 100;
     else if(c.followers > 0) engagement = ((avgLikes + avgComments + avgShares) / c.followers) * 100;
     else engagement = 0;
+
+    // Régularité : coefficient de variation de l'engagement par vidéo
+    let regularity = 'insuffisant';
+    if(c.videoEng.length >= 2){
+      const m = avg(c.videoEng);
+      const variance = c.videoEng.reduce((s,v) => s + Math.pow(v-m,2), 0) / c.videoEng.length;
+      const cv = m > 0 ? Math.sqrt(variance) / m : 0;
+      regularity = cv < 0.5 ? 'stable' : cv < 1 ? 'variable' : 'irrégulier';
+    }
+
+    const daysSincePost = c.lastPostTs ? Math.floor((Date.now() - c.lastPostTs) / 86400000) : null;
+    let activity = 'inconnue';
+    if(daysSincePost !== null){
+      activity = daysSincePost <= 14 ? 'active' : daysSincePost <= 45 ? 'modérée' : 'faible';
+    }
+
     out.push({ id:c.id, handle:c.handle, displayName:c.displayName, avatar:c.avatar, url:c.url,
-      followers:c.followers, avgViews, avgLikes, avgComments, engagement, sampled:c.sampled,
+      followers:c.followers, verified: !!c.verified, avgViews, avgLikes, avgComments, engagement,
+      sampled:c.sampled, regularity, lastPostTs: c.lastPostTs, daysSincePost, activity,
       probablyFR: c.langVotes > 0 ? (c.frVotes / c.langVotes) >= 0.5 : null });
   }
   return out;
@@ -655,11 +694,12 @@ function readConfig(){
 function exportCSV(){
   if(rawCreators.length === 0) return;
   const cfg = readConfig();
-  const rows = [['Créateur','Handle','URL','Followers','Vues moy.','Likes moy.','Comm. moy.','Engagement %','Score','Tier','Trouvé (x)','Termes source','Langue']];
+  const rows = [['Créateur','Handle','URL','Followers','Vérifié','Vues moy.','Likes moy.','Comm. moy.','Engagement %','Régularité','Activité','Score','Tier','Trouvé (x)','Termes source','Langue']];
   rawCreators.forEach(c => {
     const s = scoreCreator(c, cfg);
-    rows.push([c.displayName, c.handle, c.url, Math.round(c.followers), Math.round(c.avgViews),
+    rows.push([c.displayName, c.handle, c.url, Math.round(c.followers), c.verified?'Oui':'Non', Math.round(c.avgViews),
       Math.round(c.avgLikes), Math.round(c.avgComments), c.engagement.toFixed(2),
+      regularityLabel(c.regularity), activityLabel(c.activity, c.daysSincePost),
       `${s.passed}/${s.total}`, TIER_LABEL[s.tier], c.timesFound || 1,
       (c.sourceTerms||[]).join(' | '), c.probablyFR===true?'FR':c.probablyFR===false?'Autre':'?']);
   });
@@ -727,10 +767,14 @@ function renderTable(){
       ${lastNewIds.has(c.id) ? '<div class="hint" style="margin:-6px 0 6px;color:var(--cyan);">🆕 Nouveau dans cette recherche</div>' : c.timesFound > 1 ? `<div class="hint" style="margin:-6px 0 6px;">🔁 Retrouvé ${c.timesFound}× dans tes recherches</div>` : ''}
       ${c.probablyFR === true ? '<div class="hint" style="margin:-6px 0 6px;">🇫🇷 Légendes probablement en français</div>' : c.probablyFR === false ? '<div class="hint" style="margin:-6px 0 6px;">🌍 Légendes probablement pas en français</div>' : ''}
       <div class="stats-mini">
-        <div><span>Followers</span><b>${fmt(c.followers)}</b></div>
+        <div><span>Followers</span><b>${fmt(c.followers)}${c.verified ? ' ✔️' : ''}</b></div>
         <div><span>Vues moy.</span><b>${fmt(c.avgViews)}</b></div>
         <div><span>Likes moy.</span><b>${fmt(c.avgLikes)}</b></div>
         <div><span>Engagement</span><b>${c.engagement.toFixed(2)}%</b></div>
+      </div>
+      <div class="checklist">
+        <div class="check-item"><div class="ico ${regularityIco(c.regularity)}">${regularityGlyph(c.regularity)}</div>Régularité : ${regularityLabel(c.regularity)}</div>
+        <div class="check-item"><div class="ico ${activityIco(c.activity)}">${activityGlyph(c.activity)}</div>Activité : ${activityLabel(c.activity, c.daysSincePost)}</div>
       </div>
       <div class="checklist">
         ${c._score.checks.map(ch => `
@@ -746,6 +790,22 @@ function renderTable(){
       </div>
     </div>`;
   }).join('');
+}
+
+function regularityIco(r){ return r==='stable' ? 'ok' : r==='irrégulier' ? 'ko' : 'warn'; }
+function regularityGlyph(r){ return r==='stable' ? '✓' : r==='variable' ? '~' : r==='irrégulier' ? '⚠' : '?'; }
+function regularityLabel(r){
+  return { stable:'stable sur plusieurs vidéos', variable:'assez variable',
+    'irrégulier':'irrégulier (possible pic isolé)', insuffisant:'pas assez de vidéos pour juger' }[r] || r;
+}
+function activityIco(a){ return a==='active' ? 'ok' : a==='faible' ? 'ko' : 'warn'; }
+function activityGlyph(a){ return a==='active' ? '✓' : a==='modérée' ? '~' : a==='faible' ? '⚠' : '?'; }
+function activityLabel(a, days){
+  if(a==='inconnue') return 'date non disponible';
+  if(days===0) return "aujourd'hui";
+  if(a==='active') return `récente (il y a ${days}j)`;
+  if(a==='modérée') return `moyenne (il y a ${days}j)`;
+  return `faible (il y a ${days}j)`;
 }
 
 function escapeHtml(s){
