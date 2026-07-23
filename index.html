@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scout — Recherche d'influenceurs TikTok</title>
+<style>
+  :root{
+    --bg: #0c0d11;
+    --panel: #15171d;
+    --panel-2: #1c1f27;
+    --panel-3: #23262f;
+    --border: #262932;
+    --border-soft: #1f222a;
+    --text: #f2f0eb;
+    --muted: #888a96;
+    --muted-soft: #6b6d78;
+    --cyan: #2fe6df;
+    --pink: #fe2c55;
+    --green: #4ade80;
+    --amber: #f5b34c;
+    --radius: 14px;
+    --radius-sm: 9px;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;}
+  body{padding-bottom:80px;}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px;}
+
+  .topbar{position:sticky;top:0;z-index:20;background:rgba(12,13,17,.85);backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--border-soft);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:15px 24px;display:flex;align-items:center;
+    justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:9px;}
+  .brand .mark{width:11px;height:11px;border-radius:4px;
+    background:linear-gradient(135deg,var(--cyan),var(--pink));flex:none;
+    box-shadow:0 0 12px -2px rgba(47,230,223,.5);}
+  .brand h1{font-size:18px;font-weight:800;letter-spacing:-0.03em;margin:0;}
+  .brand span{color:var(--muted-soft);font-size:12px;font-weight:500;letter-spacing:-.01em;}
+
+  .tabs{display:flex;gap:2px;background:var(--panel-2);border:1px solid var(--border-soft);
+    border-radius:99px;padding:3px;}
+  .tab{border:none;background:transparent;color:var(--muted);font-weight:700;font-size:12.5px;
+    padding:7px 15px;border-radius:99px;cursor:pointer;transition:all .2s ease;display:flex;align-items:center;gap:7px;}
+  .tab.active{background:var(--panel-3);color:var(--text);box-shadow:var(--shadow-sm);}
+  .tab:not(.active):hover{color:var(--text);}
+  .tab .tag{background:rgba(47,230,223,.15);color:var(--cyan);font-size:10.5px;font-weight:800;
+    padding:1px 7px;border-radius:99px;}
+
+  .hero{padding:30px 0 22px;}
+  .hero p{color:var(--muted);font-size:14px;margin:6px 0 0;max-width:600px;line-height:1.6;}
+
+  .view{display:none;}
+  .view.active{display:block;animation:fadein .25s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  .panel{background:var(--panel);border:1px solid var(--border-soft);border-radius:var(--radius);
+    padding:22px;margin-bottom:16px;box-shadow:var(--shadow);}
+  .panel h2{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted-soft);
+    margin:0 0 16px;font-weight:800;display:flex;align-items:center;gap:8px;}
+  .panel h2 .n{width:17px;height:17px;border-radius:50%;background:var(--panel-3);color:var(--text);
+    font-size:9.5px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;}
+
+  .row{display:flex;gap:12px;flex-wrap:wrap;}
+  .field{flex:1;min-width:180px;display:flex;flex-direction:column;gap:6px;}
+  .field label{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:-.005em;}
+  input[type=text],input[type=password],input[type=number],select{
+    background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    padding:11px 13px;border-radius:var(--radius-sm);font-size:13.5px;width:100%;outline:none;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input:focus,select:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(47,230,223,.12);}
+  .hint{font-size:11.5px;color:var(--muted-soft);margin-top:5px;line-height:1.5;}
+  .hint a{color:var(--cyan);text-decoration:none;}
+  .hint a:hover{text-decoration:underline;}
+
+  button{cursor:pointer;border:none;border-radius:var(--radius-sm);font-weight:700;font-size:13.5px;
+    padding:11px 19px;transition:opacity .15s, transform .1s, box-shadow .15s;}
+  button:hover{opacity:.9;}
+  button:active{transform:scale(.97);}
+  button:disabled{opacity:.45;cursor:not-allowed;}
+  .btn-primary{background:linear-gradient(135deg,var(--cyan),#1fb8c9);color:#08171a;
+    box-shadow:0 4px 16px -4px rgba(47,230,223,.4);}
+  .btn-ghost{background:var(--panel-2);border:1px solid var(--border);color:var(--text);}
+  .btn-ghost:hover{background:var(--panel-3);opacity:1;}
+  .btn-sm{padding:8px 14px;font-size:12px;}
+
+  .actions{display:flex;justify-content:flex-end;margin-top:18px;gap:10px;}
+
+  .status{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted);padding:14px 0 0;}
+  .spinner{width:13px;height:13px;border-radius:50%;border:2px solid var(--border);
+    border-top-color:var(--cyan);animation:spin .8s linear infinite;flex:none;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .error{background:rgba(254,44,85,.08);border:1px solid rgba(254,44,85,.3);color:#ffb3c1;
+    padding:13px 15px;border-radius:var(--radius-sm);font-size:12.5px;margin-top:14px;line-height:1.55;}
+
+  .filters{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;}
+
+  .stats-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+  .stat-card{background:var(--panel);border:1px solid var(--border-soft);border-radius:var(--radius);
+    padding:16px 18px;border-top:3px solid var(--border);box-shadow:var(--shadow-sm);}
+  .stat-card .v{font-size:25px;font-weight:800;letter-spacing:-0.03em;}
+  .stat-card .l{color:var(--muted-soft);font-size:11.5px;margin-top:2px;font-weight:600;}
+  .stat-card.green{border-top-color:var(--green);}
+  .stat-card.red{border-top-color:var(--pink);}
+  .stat-card.grey{border-top-color:#4b4d57;}
+  .stat-card.cyan{border-top-color:var(--cyan);}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;}
+  .tierbar{display:flex;gap:7px;flex-wrap:wrap;}
+  .tierbtn{background:var(--panel-2);border:1px solid var(--border);color:var(--muted);
+    padding:7px 13px;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;}
+  .tierbtn.active{color:var(--text);border-color:var(--cyan);background:var(--panel-3);}
+  .tierbtn:hover{color:var(--text);}
+  .tierbtn .dot{display:inline-block;margin-right:6px;vertical-align:-1px;}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none;}
+  .dot.green{background:var(--green);}
+  .dot.red{background:var(--pink);}
+  .dot.grey{background:#4b4d57;}
+  .dot.cyan{background:var(--cyan);}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;}
+  .card{background:var(--panel);border:1px solid var(--border-soft);border-radius:var(--radius);
+    padding:18px;border-left:3px solid #4b4d57;transition:transform .18s ease, box-shadow .18s ease;
+    box-shadow:var(--shadow-sm);}
+  .card:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
+  .card.green{border-left-color:var(--green);}
+  .card.red{border-left-color:var(--pink);}
+  .card.grey{border-left-color:#4b4d57;opacity:.62;}
+  .card.approved{box-shadow:0 0 0 1px rgba(47,230,223,.35), var(--shadow);}
+  .badge.approved-badge{background:rgba(47,230,223,.14);color:var(--cyan);}
+  .approve-btn.is-approved{border-color:var(--cyan);color:var(--cyan);background:rgba(47,230,223,.08);}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px;}
+  .creator{display:flex;align-items:center;gap:10px;}
+  .avatar{width:36px;height:36px;border-radius:50%;background:var(--panel-2);
+    object-fit:cover;flex:none;border:1px solid var(--border);}
+  .cname{font-weight:700;font-size:14px;letter-spacing:-.01em;}
+  .cname a{color:var(--text);text-decoration:none;}
+  .cname a:hover{color:var(--cyan);}
+  .chandle{color:var(--muted-soft);font-size:11.5px;}
+  .badge{font-size:10px;font-weight:800;padding:4px 10px;border-radius:99px;white-space:nowrap;letter-spacing:.01em;}
+  .badge.green{background:rgba(74,222,128,.14);color:var(--green);}
+  .badge.red{background:rgba(254,44,85,.14);color:#ff8fa3;}
+  .badge.grey{background:rgba(139,141,152,.14);color:var(--muted);}
+
+  .stats-mini{display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;margin:14px 0;
+    padding:12px;background:var(--panel-2);border-radius:var(--radius-sm);font-size:12px;}
+  .stats-mini div span{display:block;color:var(--muted-soft);font-size:10px;text-transform:uppercase;letter-spacing:.05em;}
+  .stats-mini div b{font-size:14.5px;font-weight:700;}
+
+  .checklist{display:flex;flex-direction:column;gap:7px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);}
+  .check-item{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);line-height:1.3;}
+  .check-item .ico{width:15px;height:15px;border-radius:50%;flex:none;display:flex;align-items:center;
+    justify-content:center;font-size:9px;font-weight:900;}
+  .check-item .ico.ok{background:rgba(74,222,128,.16);color:var(--green);}
+  .check-item .ico.ko{background:rgba(254,44,85,.14);color:#ff8fa3;}
+  .check-item .ico.warn{background:rgba(245,179,76,.16);color:var(--amber);}
+
+  .chip{background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    padding:7px 13px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;transition:all .15s;}
+  .chip:hover{border-color:var(--cyan);background:var(--panel-3);transform:translateY(-1px);}
+  .chip .c{color:var(--muted-soft);font-size:10.5px;}
+  .chip.tag{color:var(--cyan);}
+
+  .empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:13.5px;}
+  .empty .big{font-size:30px;margin-bottom:10px;opacity:.6;}
+  .count{color:var(--muted-soft);font-size:12px;}
+  footer{color:var(--muted-soft);font-size:11.5px;text-align:center;margin-top:36px;line-height:1.6;}
+  footer a{color:var(--cyan);}
+
+  @media (max-width: 640px){
+    body{overflow-x:hidden;}
+    .row{flex-direction:column;}
+    .field{max-width:100% !important;width:100%;min-width:0;}
+    .topbar-inner{padding:14px 16px;}
+    .wrap{padding:0 16px;}
+    .panel{padding:16px;}
+  }
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCGVC-xJbYTIyx7mErQhETruRzW7IhDyBU",
+    authDomain: "scout-influ.firebaseapp.com",
+    projectId: "scout-influ",
+    storageBucket: "scout-influ.firebasestorage.app",
+    messagingSenderId: "101935489312",
+    appId: "1:101935489312:web:054b8d3737622aa79eb745",
+    measurementId: "G-LH03DV13MF"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><div class="mark"></div><h1>Scout</h1><span>influenceurs TikTok</span></div>
+    <div class="tabs">
+      <button class="tab active" id="tabSearch" onclick="showView('search')">Recherche</button>
+      <button class="tab" id="tabRepertoire" onclick="showView('repertoire')">Répertoire <span class="tag" id="repCount" style="display:none;">0</span></button>
+      <button class="tab" id="tabSuivi" onclick="showView('suivi')">Suivi <span class="tag" id="suiviCount" style="display:none;">0</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div id="view-search" class="view active">
+    <div class="hero">
+      <p>Cherche des comptes TikTok par mot-clé ou hashtag, récupère leurs statistiques, calcule leur taux d'engagement et classe automatiquement les meilleurs profils.</p>
+    </div>
+
+    <div class="panel">
+      <h2><span class="n">1</span>Connexion</h2>
+      <div class="row">
+        <div class="field">
+          <label for="token">Clé API Apify</label>
+          <input type="password" id="token" placeholder="apify_api_...">
+          <div class="hint">Récupère ta clé dans Apify Console → Settings → Integrations. Collée une fois, elle est sauvegardée automatiquement dans ce navigateur — jamais dans le code, jamais visible par un autre visiteur. <a href="#" onclick="forgetToken();return false;">Oublier la clé sur cet appareil</a></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="n">2</span>Recherche</h2>
+      <div class="row">
+        <div class="field" style="flex:2;">
+          <label for="keyword">Mots-clés (séparés par une virgule)</label>
+          <input type="text" id="keyword" placeholder="ex : cuisine vegan, tech, fitness..." oninput="updateEstimate()">
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <div class="field" style="flex:2;">
+          <label for="hashtags">Hashtags (sans le #, séparés par une virgule)</label>
+          <input type="text" id="hashtags" placeholder="ex : fitness, foryou, cuisine" oninput="updateEstimate()">
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <div class="field" style="flex:2;">
+          <label for="profiles">Comptes de référence à inclure (@ ou pseudo, séparés par une virgule)</label>
+          <input type="text" id="profiles" placeholder="ex : mrbeast, khaby.lame" oninput="updateEstimate()">
+          <div class="hint">Leurs vidéos seront analysées et ajoutées directement au répertoire, en plus des résultats du mot-clé — utile pour comparer des comptes que tu as déjà repérés.</div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <div class="field" style="max-width:200px;">
+          <label for="country">Région / langue ciblée</label>
+          <select id="country">
+            <option value="">Toutes (par défaut)</option>
+            <option value="FR">France</option>
+            <option value="BE">Belgique</option>
+            <option value="CH">Suisse</option>
+            <option value="CA">Canada</option>
+            <option value="US">États-Unis</option>
+            <option value="GB">Royaume-Uni</option>
+            <option value="DE">Allemagne</option>
+            <option value="ES">Espagne</option>
+            <option value="IT">Italie</option>
+            <option value="MA">Maroc</option>
+            <option value="DZ">Algérie</option>
+            <option value="TN">Tunisie</option>
+          </select>
+          <div class="hint">⚠️ Change juste le serveur par lequel passe la recherche — ne garantit pas des comptes français. Utilise plutôt le filtre "🇫🇷 Francophone uniquement" dans le répertoire pour vraiment filtrer.</div>
+        </div>
+        <div class="field" style="max-width:160px;">
+          <label for="perpage">Vidéos par lot</label>
+          <input type="number" id="perpage" value="30" min="10" max="100" oninput="updateEstimate()">
+        </div>
+        <div class="field" style="max-width:190px;">
+          <label for="targetGreen">Objectif 🟢 Parfait (0 = désactivé)</label>
+          <input type="number" id="targetGreen" value="0" min="0" step="10" placeholder="ex : 100" oninput="updateEstimate()">
+          <div class="hint">Relance automatiquement la recherche par lots jusqu'à atteindre ce nombre de comptes 🟢 dans ton répertoire (max 10 lots par sécurité — consomme des crédits Apify à chaque lot).</div>
+        </div>
+        <div class="field" style="max-width:170px;">
+          <label for="cFollowers">Followers minimum</label>
+          <input type="number" id="cFollowers" value="5000" min="0" step="500" oninput="renderTable()">
+        </div>
+        <div class="field" style="max-width:170px;">
+          <label for="cFollowersMax">Followers maximum</label>
+          <input type="number" id="cFollowersMax" value="" min="0" step="500" placeholder="illimité" oninput="renderTable()">
+          <div class="hint">Laisse vide pour aucune limite haute.</div>
+        </div>
+        <div class="field" style="max-width:190px;">
+          <label for="cViewsMin">Vues moyennes minimum</label>
+          <input type="number" id="cViewsMin" value="25000" min="0" step="1000" oninput="renderTable()">
+        </div>
+        <div class="field" style="max-width:170px;">
+          <label for="cEngagement">Engagement minimum (%)</label>
+          <input type="number" id="cEngagement" value="10" min="0" step="0.5" oninput="renderTable()">
+        </div>
+      </div>
+      <div class="hint" style="margin-top:12px;">Ces 3 seuils (followers, vues moyennes, engagement) déterminent le badge 🟢 vert dans le répertoire.</div>
+      <div class="row" style="margin-top:12px;align-items:center;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);cursor:pointer;">
+          <input type="checkbox" id="adaptiveScoring" style="width:auto;" onchange="renderTable()">
+          Score adaptatif basé sur mes comptes de référence (au lieu des seuils fixes ci-dessus)
+        </label>
+      </div>
+      <div id="estimateBox" class="hint" style="margin-top:10px;"></div>
+      <div class="actions">
+        <button class="btn-primary" id="runBtn" onclick="runSearch()">Lancer la recherche</button>
+      </div>
+      <div id="statusZone"></div>
+    </div>
+  </div>
+
+  <div id="view-repertoire" class="view">
+    <div class="hero" style="padding-top:28px;">
+      <p>Répertoire cumulatif — chaque recherche ajoute ses nouveaux créateurs sans effacer les précédents, sauvegardé sur cet appareil. 🟢 Parfait (followers, engagement et vues moy. dans les seuils) · 🔴 Moyen (au moins la moitié des critères) · ⚪ Faible (moins de la moitié).</p>
+    </div>
+
+    <div class="stats-strip" id="statsStrip"></div>
+
+    <div class="panel" id="suggestPanel" style="display:none;">
+      <h2>💡 Mots-clés détectés dans les vidéos analysées</h2>
+      <div class="hint" style="margin-bottom:12px;">Fréquents dans les légendes des vidéos trouvées (avec ou sans #) — clique pour l'ajouter à ta prochaine recherche.</div>
+      <div id="suggestChips" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+    </div>
+
+    <div class="toolbar">
+      <input type="text" id="searchHandle" placeholder="🔍 Chercher un pseudo dans le répertoire..." oninput="renderTable()" style="max-width:280px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:9px 13px;border-radius:var(--radius-sm);font-size:13px;width:100%;outline:none;margin-bottom:14px;">
+    </div>
+
+    <div class="toolbar">
+      <div class="tierbar" id="tierbar">
+        <button class="tierbtn" data-tier="all" onclick="setTier('all')">Tous</button>
+        <button class="tierbtn active" data-tier="green" onclick="setTier('green')"><span class="dot green"></span>Parfait</button>
+        <button class="tierbtn" data-tier="red" onclick="setTier('red')"><span class="dot red"></span>Moyen</button>
+        <button class="tierbtn" data-tier="grey" onclick="setTier('grey')"><span class="dot grey"></span>Faible</button>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button class="tierbtn active" id="frToggle" onclick="toggleFrFilter()">🇫🇷 Francophone uniquement</button>
+        <button class="tierbtn" id="approvedToggle" onclick="toggleApprovedFilter()">✅ Approuvés uniquement</button>
+        <select id="sortBy" onchange="renderTable()" style="width:auto;min-width:170px;">
+          <option value="discovery" selected>Trier : Ordre de découverte</option>
+          <option value="score">Trier : Score qualité</option>
+          <option value="engagement">Trier : Engagement</option>
+          <option value="followers">Trier : Followers</option>
+          <option value="views">Trier : Vues moyennes</option>
+        </select>
+        <span class="count" id="countLabel"></span>
+        <button class="btn-ghost btn-sm" onclick="exportCSV()">Exporter CSV</button>
+        <button class="btn-ghost btn-sm" onclick="showView('search')">Nouvelle recherche</button>
+        <button class="btn-ghost btn-sm" onclick="resetRepertoire()" title="Effacer tout le répertoire accumulé">🗑️ Réinitialiser</button>
+        <button class="btn-ghost btn-sm" onclick="importLegacyData()" title="Récupère les données stockées avant le passage à la base partagée">📥 Importer l'ancien répertoire</button>
+      </div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <div id="view-suivi" class="view">
+    <div class="hero">
+      <p>Suivi de tes demandes de collab — apparaît automatiquement dès qu'un influenceur est marqué ✅ Approuvé dans le répertoire.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Modèle de message</h2>
+      <div class="field">
+        <label for="msgTemplate">Utilise {pseudo} pour insérer automatiquement le nom du créateur</label>
+        <textarea id="msgTemplate" rows="4" style="background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:11px 13px;border-radius:var(--radius-sm);font-size:13.5px;width:100%;outline:none;font-family:inherit;resize:vertical;" oninput="saveMsgTemplate()"></textarea>
+      </div>
+    </div>
+
+    <div class="stats-strip" id="suiviStats"></div>
+
+    <div class="toolbar">
+      <div class="tierbar" id="suiviFilterBar">
+        <button class="tierbtn active" data-sf="all" onclick="setSuiviFilter('all')">Tous</button>
+        <button class="tierbtn" data-sf="a_contacter" onclick="setSuiviFilter('a_contacter')">⚪ À contacter</button>
+        <button class="tierbtn" data-sf="message_envoye" onclick="setSuiviFilter('message_envoye')">🟡 Message envoyé</button>
+        <button class="tierbtn" data-sf="a_repondu" onclick="setSuiviFilter('a_repondu')">🔵 A répondu</button>
+        <button class="tierbtn" data-sf="colis_envoye" onclick="setSuiviFilter('colis_envoye')">🟢 Colis envoyé</button>
+      </div>
+      <span class="count" id="suiviCountLabel"></span>
+    </div>
+
+    <div class="grid" id="suiviGrid"></div>
+  </div>
+
+  <footer>
+    Données publiques récupérées via un service tiers (Apify / TikTok Scraper). Usage personnel — vérifie les conditions d'utilisation de TikTok avant un usage commercial ou à grande échelle.
+  </footer>
+</div>
+
+<script>
+let rawCreators = [];
+const TOKEN_KEY = 'scout_apify_token';
+
+const DEFAULT_TEMPLATE = "Salut {pseudo} 👋 J'adore ton contenu ! Je te contacte de la part de [ta marque/toi] — ça t'intéresserait d'échanger sur une collab ? 😊";
+
+let trackingCache = {};
+let msgTemplateCache = DEFAULT_TEMPLATE;
+let msgTemplateSaveTimer = null;
+
+function loadTracking(){
+  return trackingCache; // à jour via le listener temps réel Firestore
+}
+function getTrackingFor(id){
+  return trackingCache[id] || { messageSent:false, replied:false, packageSent:false, notes:'' };
+}
+function updateTracking(id, patch){
+  const merged = { ...getTrackingFor(id), ...patch };
+  trackingCache[id] = merged;
+  db.collection('tracking').doc(id).set(merged, { merge:true }).catch(e => console.error('Erreur tracking Firestore:', e));
+  return merged;
+}
+
+function loadMsgTemplate(){
+  return msgTemplateCache;
+}
+function saveMsgTemplate(){
+  const el = document.getElementById('msgTemplate');
+  if(!el) return;
+  msgTemplateCache = el.value;
+  clearTimeout(msgTemplateSaveTimer);
+  msgTemplateSaveTimer = setTimeout(() => {
+    db.collection('meta').doc('msgTemplate').set({ value: msgTemplateCache }).catch(e => console.error(e));
+  }, 800); // léger délai pour ne pas écrire à chaque frappe
+}
+
+async function copyMessageFor(id, btnEl){
+  const c = rawCreators.find(x => x.id === id);
+  if(!c) return;
+  const template = document.getElementById('msgTemplate').value || DEFAULT_TEMPLATE;
+  const msg = template.replaceAll('{pseudo}', '@'+c.handle);
+  try{
+    await navigator.clipboard.writeText(msg);
+    const original = btnEl.textContent;
+    btnEl.textContent = '✅ Message copié — colle-le dans TikTok';
+    setTimeout(() => { btnEl.textContent = original; }, 2200);
+  }catch(e){
+    prompt('Copie ce message manuellement :', msg);
+  }
+  toggleTrackingField(id, 'messageSent', true);
+}
+
+function toggleTrackingField(id, field, forceValue){
+  const current = getTrackingFor(id);
+  const newVal = forceValue !== undefined ? forceValue : !current[field];
+  const patch = { [field]: newVal };
+  patch[field + 'Date'] = newVal ? Date.now() : null;
+  updateTracking(id, patch);
+  renderSuivi();
+}
+
+function updateTrackingNotes(id, value){
+  updateTracking(id, { notes: value });
+}
+
+function trackingStatus(t){
+  if(t.packageSent) return 'colis_envoye';
+  if(t.replied) return 'a_repondu';
+  if(t.messageSent) return 'message_envoye';
+  return 'a_contacter';
+}
+const SUIVI_LABEL = { a_contacter:'⚪ À contacter', message_envoye:'🟡 Message envoyé', a_repondu:'🔵 A répondu', colis_envoye:'🟢 Colis envoyé' };
+
+let suiviFilter = 'all';
+function setSuiviFilter(f){
+  suiviFilter = f;
+  document.querySelectorAll('#suiviFilterBar .tierbtn').forEach(b => b.classList.toggle('active', b.dataset.sf === f));
+  renderSuivi();
+}
+
+function fmtDate(ts){
+  if(!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'2-digit' });
+}
+
+function carrierTrackingUrl(carrier, number){
+  const n = encodeURIComponent(number.trim());
+  const urls = {
+    laposte: `https://www.laposte.fr/outils/suivre-vos-envois?code=${n}`,
+    chronopost: `https://www.chronopost.fr/tracking-no-cms/suivi-colis?listeNumerosLT=${n}`,
+    mondialrelay: `https://www.mondialrelay.fr/suivi-de-colis?numeroExpedition=${n}`,
+    ups: `https://www.ups.com/track?tracknum=${n}`,
+    dhl: `https://www.dhl.com/fr-fr/home/tracking.html?tracking-id=${n}`,
+    fedex: `https://www.fedex.com/fedextrack/?trknbr=${n}`
+  };
+  return urls[carrier] || `https://www.google.com/search?q=${encodeURIComponent('suivi colis '+number)}`;
+}
+
+function renderSuivi(){
+  const tplEl = document.getElementById('msgTemplate');
+  if(tplEl && !tplEl.value) tplEl.value = loadMsgTemplate();
+
+  const approved = rawCreators.filter(c => c.tracked);
+  const tracking = loadTracking();
+  const withStatus = approved.map(c => ({ c, t: tracking[c.id] || { messageSent:false, replied:false, packageSent:false, notes:'' } }));
+  const withLabel = withStatus.map(x => ({ ...x, status: trackingStatus(x.t) }));
+
+  document.getElementById('suiviCount').style.display = approved.length > 0 ? 'inline-block' : 'none';
+  document.getElementById('suiviCount').textContent = approved.length;
+
+  const counts = { a_contacter:0, message_envoye:0, a_repondu:0, colis_envoye:0 };
+  withLabel.forEach(x => counts[x.status]++);
+  document.getElementById('suiviStats').innerHTML = `
+    <div class="stat-card cyan"><div class="v">${approved.length}</div><div class="l">Dans le suivi</div></div>
+    <div class="stat-card grey"><div class="v">${counts.a_contacter}</div><div class="l">⚪ À contacter</div></div>
+    <div class="stat-card"><div class="v">${counts.message_envoye}</div><div class="l">🟡 Message envoyé</div></div>
+    <div class="stat-card"><div class="v">${counts.a_repondu}</div><div class="l">🔵 A répondu</div></div>
+    <div class="stat-card green"><div class="v">${counts.colis_envoye}</div><div class="l">🟢 Colis envoyé</div></div>
+  `;
+
+  const list = suiviFilter === 'all' ? withLabel : withLabel.filter(x => x.status === suiviFilter);
+  document.getElementById('suiviCountLabel').textContent = `${list.length} affiché(s) sur ${approved.length}`;
+
+  const grid = document.getElementById('suiviGrid');
+  if(approved.length === 0){
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1;"><div class="big">📨</div>Personne dans le suivi pour l'instant. Va dans le Répertoire et clique "☐ Envoyer au suivi" sur ceux que tu veux contacter.</div>`;
+    return;
+  }
+  if(list.length === 0){
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1;">Aucun influenceur dans cette étape.</div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(({c, t, status}) => {
+    return `
+    <div class="card" style="border-left-color:${status==='colis_envoye'?'var(--green)':status==='a_repondu'?'var(--cyan)':status==='message_envoye'?'var(--amber)':'#4b4d57'};position:relative;">
+      <button onclick="toggleTracked('${c.id}')" title="Retirer du suivi" style="position:absolute;top:10px;right:10px;width:24px;height:24px;padding:0;border-radius:50%;background:var(--panel-2);border:1px solid var(--border);color:var(--muted);font-size:13px;line-height:1;cursor:pointer;">✕</button>
+      <div class="card-top">
+        <div class="creator">
+          ${c.avatar ? `<img class="avatar" src="${c.avatar}" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'">` : `<div class="avatar"></div>`}
+          <div>
+            <div class="cname">${escapeHtml(c.displayName)}</div>
+            <div class="chandle">@${escapeHtml(c.handle)}</div>
+          </div>
+        </div>
+        <span class="badge" style="background:rgba(255,255,255,.06);">${SUIVI_LABEL[status]}</span>
+      </div>
+
+      <button class="btn-ghost btn-sm" style="width:100%;margin-top:4px;" onclick="copyMessageFor('${c.id}', this)">
+        💬 Copier le message de collab
+      </button>
+      <button class="btn-ghost btn-sm" style="width:100%;margin-top:8px;" onclick="copyProfileLink('${c.handle}', this)">
+        📋 Copier le lien du profil
+      </button>
+
+      <div class="checklist">
+        <div class="check-item" style="cursor:pointer;" onclick="toggleTrackingField('${c.id}','messageSent')">
+          <div class="ico ${t.messageSent?'ok':'ko'}">${t.messageSent?'✓':'?'}</div>Message envoyé ${t.messageSentDate?`(${fmtDate(t.messageSentDate)})`:''}
+        </div>
+        <div class="check-item" style="cursor:pointer;" onclick="toggleTrackingField('${c.id}','replied')">
+          <div class="ico ${t.replied?'ok':'ko'}">${t.replied?'✓':'?'}</div>A répondu ${t.repliedDate?`(${fmtDate(t.repliedDate)})`:''}
+        </div>
+        <div class="check-item" style="cursor:pointer;" onclick="toggleTrackingField('${c.id}','packageSent')">
+          <div class="ico ${t.packageSent?'ok':'ko'}">${t.packageSent?'✓':'?'}</div>Colis envoyé ${t.packageSentDate?`(${fmtDate(t.packageSentDate)})`:''}
+        </div>
+      </div>
+
+      ${t.packageSent ? `
+      <div class="row" style="margin-top:10px;gap:8px;">
+        <div class="field" style="max-width:130px;">
+          <select onchange="updateTracking('${c.id}', {carrier: this.value}); renderSuivi();" style="background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:9px 11px;border-radius:8px;font-size:12px;width:100%;">
+            <option value="">Transporteur</option>
+            <option value="laposte" ${t.carrier==='laposte'?'selected':''}>La Poste / Colissimo</option>
+            <option value="chronopost" ${t.carrier==='chronopost'?'selected':''}>Chronopost</option>
+            <option value="mondialrelay" ${t.carrier==='mondialrelay'?'selected':''}>Mondial Relay</option>
+            <option value="ups" ${t.carrier==='ups'?'selected':''}>UPS</option>
+            <option value="dhl" ${t.carrier==='dhl'?'selected':''}>DHL</option>
+            <option value="fedex" ${t.carrier==='fedex'?'selected':''}>FedEx</option>
+          </select>
+        </div>
+        <div class="field" style="flex:1;">
+          <input type="text" placeholder="Numéro de suivi" value="${escapeHtml(t.trackingNumber||'')}" onchange="updateTracking('${c.id}', {trackingNumber: this.value}); renderSuivi();" style="background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:9px 11px;border-radius:8px;font-size:12px;width:100%;">
+        </div>
+      </div>
+      ${t.trackingNumber && t.carrier ? `<button class="btn-ghost btn-sm" style="width:100%;margin-top:8px;" onclick="window.open(carrierTrackingUrl('${t.carrier}','${escapeHtml(t.trackingNumber)}'),'_blank','noopener')">📦 Suivre le colis</button>` : ''}
+      ` : ''}
+
+      <div style="margin-top:12px;">
+        <label style="font-size:11px;color:var(--muted-soft);text-transform:uppercase;letter-spacing:.05em;">Notes</label>
+        <textarea rows="2" placeholder="Ex: adresse d'envoi, code promo donné..." style="background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:9px 11px;border-radius:8px;font-size:12.5px;width:100%;outline:none;font-family:inherit;resize:vertical;margin-top:4px;" onchange="updateTrackingNotes('${c.id}', this.value)">${escapeHtml(t.notes||'')}</textarea>
+      </div>
+    </div>
+  `;
+  }).join('');
+}
+
+let searchHistoryCache = [];
+
+function loadSearchHistory(){
+  return searchHistoryCache; // à jour via le listener temps réel Firestore
+}
+
+function recordSearchHistory(keywords, hashtags){
+  const terms = [...keywords.map(k=>k.toLowerCase()), ...hashtags.map(h=>'#'+h.toLowerCase())];
+  if(terms.length === 0) return;
+  const trimmed = [...searchHistoryCache, { terms, date: Date.now() }].slice(-50); // garde les 50 dernières
+  searchHistoryCache = trimmed;
+  db.collection('meta').doc('searchHistory').set({ entries: trimmed }).catch(e => console.error(e));
+}
+
+function checkSearchRedundancy(keywords, hashtags){
+  const terms = new Set([...keywords.map(k=>k.toLowerCase()), ...hashtags.map(h=>'#'+h.toLowerCase())]);
+  if(terms.size === 0) return null;
+  const WEEK_MS = 7 * 24 * 3600 * 1000;
+  const history = loadSearchHistory().filter(h => (Date.now() - h.date) < WEEK_MS);
+  for(const h of history){
+    const overlap = h.terms.filter(t => terms.has(t)).length;
+    const ratio = overlap / Math.max(terms.size, h.terms.length);
+    if(ratio >= 0.7){
+      const daysAgo = Math.max(1, Math.round((Date.now() - h.date) / 86400000));
+      return `Termes très proches d'une recherche faite il y a ${daysAgo}j (${h.terms.join(', ')}) — risque de forte redite.`;
+    }
+  }
+  return null;
+}
+let lastNewIds = new Set(); // ids trouvés lors de la dernière recherche (pour le badge 🆕)
+
+let repertoireCache = {};
+
+function loadRepertoire(){
+  return repertoireCache; // toujours à jour grâce au listener temps réel Firestore
+}
+function saveRepertoire(map){
+  // conservé pour compatibilité mais ne devrait plus être appelé directement pour de gros volumes,
+  // voir pushCreatorDocs() pour les écritures ciblées
+  repertoireCache = map;
+  return true;
+}
+function pushCreatorDocs(ids){
+  const batch = db.batch();
+  ids.forEach(id => {
+    if(repertoireCache[id]) batch.set(db.collection('creators').doc(id), repertoireCache[id], { merge:true });
+  });
+  batch.commit().catch(e => console.error('Erreur sauvegarde Firestore:', e));
+}
+function resetRepertoire(){
+  if(!confirm('Effacer tout le répertoire partagé pour TOUT LE MONDE ? Cette action est irréversible.')) return;
+  db.collection('creators').get().then(snap => {
+    const batch = db.batch();
+    snap.forEach(doc => batch.delete(doc.ref));
+    return batch.commit();
+  }).catch(e => console.error(e));
+  rawCreators = [];
+  lastNewIds = new Set();
+  renderTable();
+  document.getElementById('repCount').style.display = 'none';
+}
+
+async function importLegacyData(){
+  let oldRepo = {}, oldTracking = {};
+  try{ oldRepo = JSON.parse(localStorage.getItem('scout_repertoire_v1') || '{}'); }catch(e){}
+  try{ oldTracking = JSON.parse(localStorage.getItem('scout_tracking_v1') || '{}'); }catch(e){}
+
+  const repoCount = Object.keys(oldRepo).length;
+  const trackingCount = Object.keys(oldTracking).length;
+
+  if(repoCount === 0){
+    alert("Aucune ancienne donnée trouvée dans ce navigateur.");
+    return;
+  }
+
+  if(!confirm(`Importer ${repoCount} créateur(s) de ton ancien répertoire (stats uniquement, rien de sensible) dans la base partagée ?`)) return;
+
+  const includeNotes = trackingCount > 0
+    ? confirm(`Tu as aussi ${trackingCount} fiche(s) de suivi. Inclure les NOTES personnelles (adresses, codes promo...) ?\n\nOK = tout importer avec les notes\nAnnuler = importer le suivi sans les notes (plus prudent, vu que ce sera visible par tout le monde)`)
+    : false;
+
+  // Import du répertoire, par lots de 400 (limite Firestore = 500 par batch)
+  const repoEntries = Object.entries(oldRepo);
+  for(let i = 0; i < repoEntries.length; i += 400){
+    const batch = db.batch();
+    repoEntries.slice(i, i+400).forEach(([id, data]) => {
+      batch.set(db.collection('creators').doc(id), data, { merge:true });
+    });
+    await batch.commit();
+  }
+
+  // Import du suivi, avec ou sans les notes selon le choix
+  if(trackingCount > 0){
+    const trackEntries = Object.entries(oldTracking);
+    for(let i = 0; i < trackEntries.length; i += 400){
+      const batch = db.batch();
+      trackEntries.slice(i, i+400).forEach(([id, data]) => {
+        const clean = includeNotes ? data : { ...data, notes: '' };
+        batch.set(db.collection('tracking').doc(id), clean, { merge:true });
+      });
+      await batch.commit();
+    }
+  }
+
+  alert(`Import terminé : ${repoCount} créateur(s)${trackingCount ? ` et ${trackingCount} fiche(s) de suivi` : ''} envoyés dans la base partagée.`);
+}
+
+function mergeIntoRepertoire(newCreators, searchLabel){
+  const repo = loadRepertoire();
+  lastNewIds = new Set();
+  const touchedIds = [];
+  const now = Date.now();
+  for(const c of newCreators){
+    const existing = repo[c.id];
+    touchedIds.push(c.id);
+    if(!existing){
+      repo[c.id] = { ...c, timesFound: 1, sourceTerms: searchLabel ? [searchLabel] : [],
+        firstSeen: now, lastSeen: now, approved: false, tracked: false };
+      lastNewIds.add(c.id);
+    } else {
+      // moyenne pondérée par le nombre d'échantillons de chaque passage
+      const w1 = existing.sampled || 1, w2 = c.sampled || 1, wt = w1 + w2;
+      existing.avgViews = (existing.avgViews*w1 + c.avgViews*w2) / wt;
+      existing.avgLikes = (existing.avgLikes*w1 + c.avgLikes*w2) / wt;
+      existing.avgComments = (existing.avgComments*w1 + c.avgComments*w2) / wt;
+      existing.engagement = (existing.engagement*w1 + c.engagement*w2) / wt;
+      existing.followers = Math.max(existing.followers, c.followers);
+      existing.sampled = wt;
+      existing.timesFound = (existing.timesFound || 1) + 1;
+      existing.avatar = c.avatar || existing.avatar;
+      existing.lastSeen = now;
+      if(c.verified) existing.verified = true;
+      // garde les indicateurs de qualité de la passe la mieux échantillonnée
+      if((c.sampled||0) >= w1){ existing.regularity = c.regularity; }
+      if(c.lastPostTs && (!existing.lastPostTs || c.lastPostTs > existing.lastPostTs)){
+        existing.lastPostTs = c.lastPostTs; existing.daysSincePost = c.daysSincePost; existing.activity = c.activity;
+      }
+      if(c.probablyFR !== null) existing.probablyFR = c.probablyFR;
+      if(c.nicheRatio !== null){
+        existing.nicheRatio = existing.nicheRatio !== null && existing.nicheRatio !== undefined
+          ? (existing.nicheRatio*w1 + c.nicheRatio*w2) / wt : c.nicheRatio;
+      }
+      if(c.isReference) existing.isReference = true;
+      if(searchLabel && !existing.sourceTerms.includes(searchLabel)) existing.sourceTerms.push(searchLabel);
+    }
+  }
+  repertoireCache = repo;
+  pushCreatorDocs(touchedIds);
+  return Object.values(repo);
+}
+
+function forgetToken(){
+  try{ localStorage.removeItem(TOKEN_KEY); }catch(e){}
+  document.getElementById('token').value = '';
+}
+window.addEventListener('DOMContentLoaded', () => {
+  try{
+    const saved = localStorage.getItem(TOKEN_KEY);
+    if(saved) document.getElementById('token').value = saved;
+  }catch(e){}
+  updateEstimate();
+  initFirebaseSync();
+});
+
+function refreshBadges(){
+  const trackedCount = rawCreators.filter(c => c.tracked).length;
+  document.getElementById('repCount').style.display = rawCreators.length > 0 ? 'inline-block' : 'none';
+  document.getElementById('repCount').textContent = rawCreators.length;
+  document.getElementById('suiviCount').style.display = trackedCount > 0 ? 'inline-block' : 'none';
+  document.getElementById('suiviCount').textContent = trackedCount;
+}
+
+function initFirebaseSync(){
+  setStatus('<div class="status"><div class="spinner"></div>Connexion à la base partagée...</div>');
+
+  // Répertoire — synchronisé en temps réel entre tous les visiteurs
+  db.collection('creators').onSnapshot(snapshot => {
+    const repo = {};
+    snapshot.forEach(doc => { repo[doc.id] = doc.data(); });
+    repertoireCache = repo;
+    rawCreators = Object.values(repo);
+    refreshBadges();
+    if(document.getElementById('view-repertoire').classList.contains('active')) renderTable();
+    if(document.getElementById('view-suivi').classList.contains('active')) renderSuivi();
+    if(document.getElementById('statusZone').innerHTML.includes('Connexion à la base')) setStatus('');
+  }, err => {
+    console.error(err);
+    setStatus('<div class="error">⚠️ Connexion à la base partagée impossible. Vérifie ta connexion internet, ou que la base Firestore est bien créée et accessible.</div>');
+  });
+
+  // Suivi — synchronisé en temps réel
+  db.collection('tracking').onSnapshot(snapshot => {
+    const t = {};
+    snapshot.forEach(doc => { t[doc.id] = doc.data(); });
+    trackingCache = t;
+    if(document.getElementById('view-suivi').classList.contains('active')) renderSuivi();
+  });
+
+  // Modèle de message partagé
+  db.collection('meta').doc('msgTemplate').onSnapshot(doc => {
+    msgTemplateCache = (doc.exists && doc.data().value) ? doc.data().value : DEFAULT_TEMPLATE;
+    const el = document.getElementById('msgTemplate');
+    if(el && document.activeElement !== el) el.value = msgTemplateCache;
+  });
+
+  // Historique de recherche partagé
+  db.collection('meta').doc('searchHistory').onSnapshot(doc => {
+    searchHistoryCache = (doc.exists && doc.data().entries) ? doc.data().entries : [];
+  });
+}
+
+function updateEstimate(){
+  const box = document.getElementById('estimateBox');
+  if(!box) return;
+  const kw = document.getElementById('keyword').value.split(',').map(s=>s.trim()).filter(Boolean).length;
+  const ht = document.getElementById('hashtags').value.split(',').map(s=>s.trim()).filter(Boolean).length;
+  const pr = document.getElementById('profiles').value.split(',').map(s=>s.trim()).filter(Boolean).length;
+  const perPage = parseInt(document.getElementById('perpage').value) || 30;
+  const target = parseInt(document.getElementById('targetGreen').value) || 0;
+  const terms = Math.max(kw + ht + pr, 1);
+
+  if(kw + ht + pr === 0){ box.textContent = ''; return; }
+
+  const videosPerBatch = perPage * terms;
+  if(target > 0){
+    box.innerHTML = `≈ ${fmt(videosPerBatch)} vidéo(s) analysée(s) par lot, jusqu'à <b>${fmt(videosPerBatch*10)}</b> au total si les 10 lots max sont utilisés (généralement moins grâce à l'arrêt automatique). Indicatif — le coût réel dépend de ta conso Apify.`;
+  } else {
+    box.innerHTML = `≈ ${fmt(videosPerBatch)} vidéo(s) analysée(s) sur ce lot unique. Indicatif — le coût réel dépend de ta conso Apify.`;
+  }
+}
+
+function showView(name){
+  document.getElementById('view-search').classList.toggle('active', name==='search');
+  document.getElementById('view-repertoire').classList.toggle('active', name==='repertoire');
+  document.getElementById('view-suivi').classList.toggle('active', name==='suivi');
+  document.getElementById('tabSearch').classList.toggle('active', name==='search');
+  document.getElementById('tabRepertoire').classList.toggle('active', name==='repertoire');
+  document.getElementById('tabSuivi').classList.toggle('active', name==='suivi');
+  if(name === 'suivi') renderSuivi();
+}
+
+function fmt(n){
+  if(n === null || n === undefined || isNaN(n)) return '—';
+  if(n >= 1000000) return (n/1000000).toFixed(1).replace('.0','')+'M';
+  if(n >= 1000) return (n/1000).toFixed(1).replace('.0','')+'k';
+  return String(Math.round(n));
+}
+function setStatus(html){ document.getElementById('statusZone').innerHTML = html; }
+
+async function runOneBatch(token, keywords, hashtags, profiles, country, perPage){
+  const url = `https://api.apify.com/v2/acts/clockworks~tiktok-scraper/run-sync-get-dataset-items?token=${encodeURIComponent(token)}`;
+  const payload = {
+    resultsPerPage: perPage,
+    shouldDownloadVideos: false,
+    shouldDownloadCovers: false,
+    shouldDownloadSubtitles: false,
+    shouldDownloadSlideshowImages: false,
+    excludePinnedPosts: true
+  };
+  if(keywords.length) payload.searchQueries = keywords;
+  if(hashtags.length) payload.hashtags = hashtags;
+  if(profiles.length) payload.profiles = profiles;
+  if(country) payload.proxyCountryCode = country;
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  if(!resp.ok){
+    const t = await resp.text();
+    throw new Error(`Erreur API (${resp.status}) : ${t.slice(0,200)}`);
+  }
+  const items = await resp.json();
+  return Array.isArray(items) ? items : [];
+}
+
+function countGreen(){
+  const cfg = readConfig();
+  return rawCreators.filter(c => scoreCreator(c, cfg).tier === 'green').length;
+}
+
+async function runSearch(){
+  const token = document.getElementById('token').value.trim();
+  const rawKeywords = document.getElementById('keyword').value.trim();
+  const keywords = rawKeywords.split(',').map(k => k.trim().replace(/^#/, '')).filter(Boolean);
+  const rawHashtags = document.getElementById('hashtags').value.trim();
+  const hashtags = rawHashtags.split(',').map(k => k.trim().replace(/^#/, '')).filter(Boolean);
+  const rawProfiles = document.getElementById('profiles').value.trim();
+  const allProfiles = rawProfiles.split(',').map(k => k.trim().replace(/^@/, '')).filter(Boolean);
+  const country = document.getElementById('country').value;
+  const perPage = parseInt(document.getElementById('perpage').value) || 30;
+  const targetGreen = parseInt(document.getElementById('targetGreen').value) || 0;
+  const btn = document.getElementById('runBtn');
+
+  if(!token){ setStatus('<div class="error">Ajoute ta clé API Apify avant de lancer une recherche.</div>'); return; }
+  if(keywords.length === 0 && hashtags.length === 0 && allProfiles.length === 0){
+    setStatus('<div class="error">Entre au moins un mot-clé, un hashtag ou un compte de référence.</div>'); return;
+  }
+
+  try{ localStorage.setItem(TOKEN_KEY, token); }catch(e){}
+
+  // Étape 2 : ne pas re-scraper un compte de référence déjà connu depuis moins de 48h
+  const repoNow = loadRepertoire();
+  const FRESH_MS = 48 * 3600 * 1000;
+  const skippedProfiles = [];
+  const profiles = allProfiles.filter(p => {
+    const existing = Object.values(repoNow).find(c => c.handle && c.handle.toLowerCase() === p.toLowerCase());
+    if(existing && existing.lastSeen && (Date.now() - existing.lastSeen) < FRESH_MS){
+      skippedProfiles.push(p);
+      return false;
+    }
+    return true;
+  });
+
+  // Étape 5 : alerte de redondance si une recherche très proche a déjà été faite récemment
+  const historyWarning = checkSearchRedundancy(keywords, hashtags);
+
+  if(keywords.length === 0 && hashtags.length === 0 && profiles.length === 0){
+    const skipMsg = skippedProfiles.length
+      ? ` Les comptes ${skippedProfiles.join(', ')} sont déjà à jour (scrapés il y a moins de 48h) — aucun appel nécessaire, crédits économisés.`
+      : '';
+    setStatus(`<div class="status">✓ Rien à scraper cette fois.${skipMsg}</div>`);
+    return;
+  }
+
+  const MAX_LOOPS = 10;
+  const totalTerms = keywords.length + hashtags.length + profiles.length;
+  btn.disabled = true;
+
+  let loop = 0;
+  let totalNewThisRun = 0;
+  let totalUniqueThisRun = 0;
+  let lastItems = [];
+  let stoppedReason = '';
+  let lowYieldStreak = 0;
+  let currentKeywords = [...keywords]; // évolue au fil des lots si diversification
+  let currentHashtags = [...hashtags];
+
+  try{
+    const skipNote = skippedProfiles.length ? ` (${skippedProfiles.length} compte(s) de référence déjà à jour, non re-scrapé(s))` : '';
+    const historyNote = historyWarning ? ` ⚠️ ${historyWarning}` : '';
+
+    do{
+      loop++;
+      const searchLabel = [...currentKeywords, ...currentHashtags.map(h=>'#'+h), ...profiles.map(p=>'@'+p)].join(', ');
+      const loopLabel = targetGreen > 0 ? ` — lot ${loop}/${MAX_LOOPS}` : '';
+      setStatus(`<div class="status"><div class="spinner"></div>Recherche en cours sur TikTok${loopLabel}${skipNote}${historyNote} — ça peut prendre 30s à 3 min...</div>`);
+
+      const items = await runOneBatch(token, currentKeywords, currentHashtags, profiles, country, perPage);
+      lastItems = items;
+
+      let newCreators = [];
+      let batchYield = 0;
+      if(items.length > 0){
+        newCreators = aggregateByCreator(items, [...currentKeywords, ...currentHashtags], allProfiles);
+        rawCreators = mergeIntoRepertoire(newCreators, searchLabel);
+        totalNewThisRun += lastNewIds.size;
+        totalUniqueThisRun += newCreators.length;
+        batchYield = newCreators.length > 0 ? lastNewIds.size / newCreators.length : 0;
+
+        document.getElementById('repCount').style.display = 'inline-block';
+        document.getElementById('repCount').textContent = rawCreators.length;
+        renderTable();
+      }
+
+      // Étape 3 : arrêt intelligent — lot vide OU faible taux de nouveauté, pas juste "vide"
+      if(items.length === 0 || batchYield < 0.1){
+        lowYieldStreak++;
+        if(loop === 1 && targetGreen === 0 && items.length === 0){ stoppedReason = 'no_results'; break; }
+        if(lowYieldStreak >= 2){ stoppedReason = 'low_yield'; break; }
+      } else {
+        lowYieldStreak = 0;
+      }
+
+      if(targetGreen > 0){
+        const green = countGreen();
+        setStatus(`<div class="status"><div class="spinner"></div>Lot ${loop}/${MAX_LOOPS} : ${green}/${targetGreen} comptes 🟢 Parfait trouvés jusqu'ici...</div>`);
+        if(green >= targetGreen){ stoppedReason = 'target_reached'; break; }
+      }
+
+      // Étape 4 : diversification — alterne mot-clé et hashtag détectés pour élargir chaque lot suivant
+      if(targetGreen > 0 && items.length > 0){
+        const kws = extractKeywords(items);
+        const plainFresh = kws.map(([w])=>w).find(w => !w.startsWith('#') && !currentKeywords.map(x=>x.toLowerCase()).includes(w.toLowerCase()));
+        const tagFresh = kws.map(([w])=>w).find(w => w.startsWith('#') && !currentHashtags.map(x=>x.toLowerCase()).includes(w.slice(1).toLowerCase()));
+        if(loop % 2 === 1 && plainFresh) currentKeywords = [...currentKeywords, plainFresh];
+        else if(tagFresh) currentHashtags = [...currentHashtags, tagFresh.slice(1)];
+        else if(plainFresh) currentKeywords = [...currentKeywords, plainFresh];
+      }
+    } while(targetGreen > 0 && loop < MAX_LOOPS);
+
+    if(targetGreen > 0 && loop >= MAX_LOOPS && stoppedReason !== 'target_reached'){
+      stoppedReason = 'max_loops';
+    }
+
+    renderKeywordSuggestions(lastItems);
+    btn.disabled = false;
+
+    const green = countGreen();
+    const alreadyKnown = totalUniqueThisRun - totalNewThisRun;
+    let msg = `✓ ${totalUniqueThisRun} compte(s) unique(s) croisé(s) dans cette recherche — ${totalNewThisRun} nouveau(x), ${alreadyKnown} déjà dans ton répertoire. (${rawCreators.length} au total, dont ${green} 🟢 Parfait).`;
+    if(stoppedReason === 'target_reached') msg += ' Objectif atteint 🎯';
+    if(stoppedReason === 'max_loops') msg += ` Limite de ${MAX_LOOPS} lots atteinte avant l'objectif — relance une recherche pour continuer, ou élargis tes mots-clés.`;
+    if(stoppedReason === 'low_yield') msg += ` Arrêté après 2 lots à faible rendement (moins de 10% de comptes vraiment nouveaux) — pour ne pas gaspiller de crédits. Essaie d'autres mots-clés pour repartir sur du terrain neuf.`;
+    if(stoppedReason === 'no_results' && totalNewThisRun === 0) msg = "Aucun résultat renvoyé. Essaie un mot-clé différent, ou vérifie ta clé API.";
+    if(skippedProfiles.length) msg += ` · ${skippedProfiles.length} compte(s) de référence économisé(s) (déjà à jour).`;
+
+    setStatus(`<div class="status">${msg}</div>`);
+    if(totalNewThisRun > 0 || rawCreators.length > 0) showView('repertoire');
+    recordSearchHistory(keywords, hashtags);
+    updateEstimate();
+
+  }catch(err){
+    btn.disabled = false;
+    setStatus(`<div class="error">Échec de la requête : ${err.message}<br><br>Vérifie : (1) que la clé API est correcte, (2) que ton compte Apify a des crédits, (3) ta connexion réseau.</div>`);
+  }
+}
+
+function getField(obj, paths){
+  for(const p of paths){
+    const parts = p.split('.');
+    let v = obj;
+    for(const part of parts){ v = v?.[part]; if(v === undefined) break; }
+    if(v !== undefined && v !== null) return v;
+  }
+  return null;
+}
+
+const FR_WORDS = new Set(['le','la','les','de','des','un','une','et','pour','avec','dans','sur','ce',
+  'cette','ces','que','qui','plus','pas','mon','ma','mes','ton','ta','tes','son','sa','ses','vous',
+  'nous','il','elle','on','en','du','au','aux','est','sont','être','avoir','comme','tout','tous',
+  'très','faire','fait','ça','moi','toi','lui','leur','notre','votre','quand','donc','alors','je',
+  'aujourd','toujours','vraiment','peut','pourquoi','merci','bonjour','salut','chez','où']);
+const EN_WORDS = new Set(['the','and','for','with','this','that','you','your','are','was','were',
+  'has','have','from','not','but','all','can','will','its','of','to','in','is','my','me','we','they',
+  'she','he','what','when','how','why','out','just','like','get','got','thank','hello','hey']);
+const ES_WORDS = new Set(['de','la','el','los','las','un','una','y','en','que','es','por','para','con',
+  'no','se','su','sus','muy','pero','más','como','esta','esto','está','son','ser','estar','hola',
+  'gracias','yo','tu','mi','tus','nos','les','fue','ha','han','al','todo','porque','ahora']);
+const PT_WORDS = new Set(['de','da','do','das','dos','um','uma','e','em','que','não','por','para','com',
+  'muito','esta','está','são','ser','estar','você','voce','obrigado','eu','meu','minha','nos','pra',
+  'pro','já','vai','foi','isso','como','mas','esse']);
+const IT_WORDS = new Set(['di','la','il','lo','gli','le','un','una','e','in','che','per','con','non',
+  'molto','questo','questa','sono','essere','grazie','ciao','io','tu','mio','mia','tuoi','ha','hanno',
+  'sei','come','ma','anche','così']);
+const DE_WORDS = new Set(['und','der','die','das','ein','eine','ist','nicht','mit','für','auch','sehr',
+  'ich','du','wir','sie','es','war','sind','haben','habe','wie','was','wenn','aber','oder','danke']);
+const ID_WORDS = new Set(['yang','dan','ini','itu','saya','kamu','tidak','adalah','untuk','dengan','ke',
+  'di','dari','akan','sudah','juga','ada','bisa','saja','banget','gak','ga','aja','kalo','kalau','kak']);
+
+function guessFrench(text){
+  if(!text) return null;
+  const clean = text.trim();
+  if(clean.length < 8) return null;
+  const lower = clean.toLowerCase();
+  const words = lower.replace(/[^\p{L}'\s]/gu,' ').split(/\s+/).filter(w => w.length >= 2);
+  if(words.length < 3) return null;
+
+  const scores = { fr:0, en:0, es:0, pt:0, it:0, de:0, id:0 };
+  const dicts = { fr:FR_WORDS, en:EN_WORDS, es:ES_WORDS, pt:PT_WORDS, it:IT_WORDS, de:DE_WORDS, id:ID_WORDS };
+  for(const w of words){
+    for(const lang in dicts){ if(dicts[lang].has(w)) scores[lang]++; }
+  }
+  // bonus fort pour les contractions typiquement françaises (peu ambiguës)
+  const frBonus = (lower.match(/\b(c'est|j'ai|j'aime|j'adore|n'est|qu'il|qu'on|d'un|d'une|l'on|c'était|n'ai|n'a|qu'elle)\b/g) || []).length;
+  scores.fr += frBonus * 3;
+
+  const entries = Object.entries(scores).sort((a,b) => b[1]-a[1]);
+  const [topLang, topScore] = entries[0];
+  const secondScore = entries[1][1];
+
+  if(topScore === 0) return null; // rien de reconnaissable
+  if(topLang !== 'fr') return false; // une autre langue domine clairement
+  if(topScore - secondScore < 1) return null; // trop serré pour trancher, on ne devine pas
+  return true;
+}
+
+function parseTs(val){
+  if(val === null || val === undefined) return null;
+  if(typeof val === 'number') return val > 2e10 ? val : val * 1000; // secondes -> ms si besoin
+  const n = Number(val);
+  if(!isNaN(n) && String(val).match(/^\d+$/)) return n > 2e10 ? n : n * 1000;
+  const parsed = Date.parse(val);
+  return isNaN(parsed) ? null : parsed;
+}
+
+function aggregateByCreator(items, searchTerms, referenceProfiles){
+  const terms = (searchTerms || []).map(t => t.toLowerCase()).filter(t => t.length >= 3);
+  const refSet = new Set((referenceProfiles || []).map(p => p.toLowerCase()));
+  const map = new Map();
+  for(const it of items){
+    const id = getField(it, ['authorMeta.id','author.id','authorMeta.uid','author.uniqueId'])
+             || getField(it, ['authorMeta.name','author.uniqueId','authorMeta.uniqueId']);
+    if(!id) continue;
+    const handle = getField(it, ['authorMeta.name','authorMeta.uniqueId','author.uniqueId']) || id;
+    const displayName = getField(it, ['authorMeta.nickName','authorMeta.nickname','author.nickname']) || handle;
+    const avatar = getField(it, ['authorMeta.avatar','author.avatarThumb','authorMeta.avatarThumb']);
+    const followers = Number(getField(it, ['authorMeta.fans','authorMeta.followerCount','author.stats.followerCount']) || 0);
+    const verified = Boolean(getField(it, ['authorMeta.verified','author.verified']));
+    const plays = Number(getField(it, ['playCount','stats.playCount']) || 0);
+    const likes = Number(getField(it, ['diggCount','stats.diggCount']) || 0);
+    const comments = Number(getField(it, ['commentCount','stats.commentCount']) || 0);
+    const shares = Number(getField(it, ['shareCount','stats.shareCount']) || 0);
+    const ts = parseTs(getField(it, ['createTimeISO','createTime']));
+    const text = getField(it, ['text','desc','description']);
+
+    if(!map.has(id)){
+      map.set(id, { id, handle, displayName, avatar, url: `https://www.tiktok.com/@${handle}`,
+        followers, verified, plays: [], likes: [], comments: [], shares: [], videoEng: [],
+        sampled: 0, frVotes: 0, langVotes: 0, lastPostTs: null, nicheMatches: 0 });
+    }
+    const c = map.get(id);
+    c.followers = Math.max(c.followers, followers);
+    if(verified) c.verified = true;
+    if(plays) c.plays.push(plays);
+    c.likes.push(likes); c.comments.push(comments); c.shares.push(shares);
+    if(plays > 0) c.videoEng.push(((likes+comments+shares)/plays)*100);
+    if(ts && (!c.lastPostTs || ts > c.lastPostTs)) c.lastPostTs = ts;
+    c.sampled += 1;
+    const g = guessFrench(text);
+    if(g !== null){ c.langVotes++; if(g) c.frVotes++; }
+    if(terms.length > 0 && text){
+      const lowerText = text.toLowerCase();
+      if(terms.some(t => lowerText.includes(t))) c.nicheMatches++;
+    }
+  }
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+  const out = [];
+  for(const c of map.values()){
+    const avgViews = avg(c.plays), avgLikes = avg(c.likes), avgComments = avg(c.comments), avgShares = avg(c.shares);
+    let engagement;
+    if(avgViews > 0) engagement = ((avgLikes + avgComments + avgShares) / avgViews) * 100;
+    else if(c.followers > 0) engagement = ((avgLikes + avgComments + avgShares) / c.followers) * 100;
+    else engagement = 0;
+
+    // Régularité : coefficient de variation de l'engagement par vidéo
+    let regularity = 'insuffisant';
+    if(c.videoEng.length >= 2){
+      const m = avg(c.videoEng);
+      const variance = c.videoEng.reduce((s,v) => s + Math.pow(v-m,2), 0) / c.videoEng.length;
+      const cv = m > 0 ? Math.sqrt(variance) / m : 0;
+      regularity = cv < 0.5 ? 'stable' : cv < 1 ? 'variable' : 'irrégulier';
+    }
+
+    const daysSincePost = c.lastPostTs ? Math.floor((Date.now() - c.lastPostTs) / 86400000) : null;
+    let activity = 'inconnue';
+    if(daysSincePost !== null){
+      activity = daysSincePost <= 14 ? 'active' : daysSincePost <= 45 ? 'modérée' : 'faible';
+    }
+
+    const nicheRatio = terms.length > 0 ? c.nicheMatches / c.sampled : null;
+    const isReference = refSet.has(c.handle.toLowerCase());
+
+    out.push({ id:c.id, handle:c.handle, displayName:c.displayName, avatar:c.avatar, url:c.url,
+      followers:c.followers, verified: !!c.verified, avgViews, avgLikes, avgComments, engagement,
+      sampled:c.sampled, regularity, lastPostTs: c.lastPostTs, daysSincePost, activity, nicheRatio, isReference,
+      probablyFR: c.langVotes > 0 ? (c.frVotes / c.langVotes) >= 0.5 : null });
+  }
+  return out;
+}
+
+const STOPWORDS = new Set([
+  'le','la','les','de','des','un','une','et','à','a','pour','avec','dans','sur','ce','cette','ces',
+  'que','qui','quoi','plus','pas','mon','ma','mes','ton','ta','tes','son','sa','ses','vous','nous',
+  'il','elle','ils','elles','on','en','du','au','aux','est','sont','être','avoir','comme','tout',
+  'tous','toute','toutes','the','and','for','with','this','that','you','your','are','was','were',
+  'has','have','from','not','but','all','can','will','was','its','it','of','to','in','is','my','me',
+  'je','tu','se','sans','par','ou','où','si','ne','très','bien','fait','faire','ça','cela','leur',
+  'leurs','notre','votre','nos','vos','être','été','étais','était','comme','quand','donc','alors'
+]);
+
+function extractKeywords(items){
+  const freq = new Map();
+  for(const it of items){
+    const text = getField(it, ['text','desc','description']) || '';
+    const cleaned = text.replace(/https?:\/\/\S+/g,' ').replace(/@[\w.]+/g,' ');
+    const tags = [...cleaned.matchAll(/#(\w+)/g)].map(m => m[1].toLowerCase());
+    tags.forEach(t => { if(t.length>=2) freq.set('#'+t, (freq.get('#'+t)||0)+2); });
+    const words = cleaned.replace(/#\w+/g,' ').toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu,' ')
+      .split(/\s+/).filter(w => w.length>=3 && !STOPWORDS.has(w) && isNaN(w));
+    words.forEach(w => freq.set(w, (freq.get(w)||0)+1));
+  }
+  return [...freq.entries()].sort((a,b)=>b[1]-a[1]).slice(0,20);
+}
+
+function addSuggestion(raw){
+  const isTag = raw.startsWith('#');
+  const clean = isTag ? raw.slice(1) : raw;
+  const fieldId = isTag ? 'hashtags' : 'keyword';
+  const el = document.getElementById(fieldId);
+  const existing = el.value.split(',').map(s=>s.trim()).filter(Boolean);
+  if(!existing.map(x=>x.toLowerCase()).includes(clean.toLowerCase())){
+    existing.push(clean);
+    el.value = existing.join(', ');
+  }
+  showView('search');
+  el.focus();
+}
+
+function renderKeywordSuggestions(items){
+  const kws = extractKeywords(items);
+  const panel = document.getElementById('suggestPanel');
+  const box = document.getElementById('suggestChips');
+  if(kws.length === 0){ panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  box.innerHTML = kws.map(([w,count]) => {
+    const isTag = w.startsWith('#');
+    return `<button class="chip ${isTag?'tag':''}" onclick="addSuggestion('${w.replace(/'/g,"\\'")}')">${escapeHtml(w)} <span class="c">×${count}</span></button>`;
+  }).join('');
+}
+function toggleApproved(id){
+  const repo = loadRepertoire();
+  if(!repo[id]) return;
+  repo[id].approved = !repo[id].approved;
+  const idx = rawCreators.findIndex(c => c.id === id);
+  if(idx >= 0) rawCreators[idx] = { ...rawCreators[idx], approved: repo[id].approved };
+  renderTable();
+  pushCreatorDocs([id]);
+}
+
+function toggleTracked(id){
+  const repo = loadRepertoire();
+  if(!repo[id]) return;
+  repo[id].tracked = !repo[id].tracked;
+  const idx = rawCreators.findIndex(c => c.id === id);
+  if(idx >= 0) rawCreators[idx] = { ...rawCreators[idx], tracked: repo[id].tracked };
+  renderTable();
+  if(document.getElementById('view-suivi').classList.contains('active')) renderSuivi();
+  const trackedCount = rawCreators.filter(c => c.tracked).length;
+  const badge = document.getElementById('suiviCount');
+  badge.style.display = trackedCount > 0 ? 'inline-block' : 'none';
+  badge.textContent = trackedCount;
+  pushCreatorDocs([id]);
+}
+
+let activeTier = 'green';
+let frOnly = true;
+let approvedOnly = false;
+function toggleFrFilter(){
+  frOnly = !frOnly;
+  document.getElementById('frToggle').classList.toggle('active', frOnly);
+  renderTable();
+}
+function toggleApprovedFilter(){
+  approvedOnly = !approvedOnly;
+  document.getElementById('approvedToggle').classList.toggle('active', approvedOnly);
+  renderTable();
+}
+function setTier(t){
+  activeTier = t;
+  document.querySelectorAll('.tierbtn[data-tier]').forEach(b => b.classList.toggle('active', b.dataset.tier === t));
+  renderTable();
+}
+
+const TIER_LABEL = {green:'Parfait', red:'Moyen', grey:'Faible'};
+const manualChecks = {};
+function getManual(id){
+  if(!manualChecks[id]) manualChecks[id] = { proof:false, replyTest:false };
+  return manualChecks[id];
+}
+function toggleManual(id, key){ getManual(id)[key] = !getManual(id)[key]; renderTable(); }
+
+function qualityScore(c, cfg){
+  const engCap = (cfg.engagement || 10) * 2;
+  const engagementPts = Math.min(c.engagement / engCap, 1) * 35;
+  const regularityPts = { stable:18, variable:9, 'irrégulier':0, insuffisant:5 }[c.regularity] ?? 5;
+  const activityPts = { active:18, 'modérée':9, faible:0, inconnue:5 }[c.activity] ?? 5;
+  const verifiedPts = c.verified ? 4 : 0;
+  const recoupementPts = Math.min((c.timesFound||1) - 1, 3) * 4;
+  const nichePts = (c.nicheRatio !== null && c.nicheRatio !== undefined) ? c.nicheRatio * 12 : 4;
+  const total = engagementPts + regularityPts + activityPts + verifiedPts + recoupementPts + nichePts;
+  return Math.round(Math.max(0, Math.min(100, total)));
+}
+
+function scoreCreator(c, cfg){
+  const checks = [
+    { label: `Followers entre ${fmt(cfg.followers)} et ${cfg.followersMax===Infinity?'∞':fmt(cfg.followersMax)}`,
+      ok: c.followers >= cfg.followers && c.followers <= cfg.followersMax },
+    { label: `Engagement ≥ ${cfg.engagement}%`, ok: c.engagement >= cfg.engagement },
+    { label: `Vues moy. ≥ ${fmt(cfg.viewsMin)}`, ok: c.avgViews >= cfg.viewsMin },
+  ];
+  const passed = checks.filter(x => x.ok).length;
+  const pct = passed / checks.length;
+  let tier;
+  if(pct === 1) tier = 'green';
+  else if(pct >= 0.5) tier = 'red';
+  else tier = 'grey';
+  return { checks, passed, total: checks.length, pct, tier };
+}
+
+function readConfig(){
+  const followersInput = document.getElementById('cFollowers');
+  const followersMaxInput = document.getElementById('cFollowersMax');
+  const viewsMinInput = document.getElementById('cViewsMin');
+  const engagementInput = document.getElementById('cEngagement');
+  const maxRaw = followersMaxInput ? followersMaxInput.value.trim() : '';
+  const manual = {
+    followers: followersInput ? (parseFloat(followersInput.value) || 0) : 5000,
+    followersMax: maxRaw === '' ? Infinity : (parseFloat(maxRaw) || Infinity),
+    viewsMin: viewsMinInput ? (parseFloat(viewsMinInput.value) || 0) : 25000,
+    engagement: engagementInput ? (parseFloat(engagementInput.value) || 0) : 10,
+    adaptive: false
+  };
+
+  const adaptiveBox = document.getElementById('adaptiveScoring');
+  if(!adaptiveBox || !adaptiveBox.checked) return manual;
+
+  const refs = rawCreators.filter(c => c.isReference);
+  const estimateBox = document.getElementById('estimateBox');
+  if(refs.length === 0){
+    if(estimateBox) estimateBox.innerHTML = '⚠️ Score adaptatif activé mais aucun compte de référence trouvé dans ton répertoire — seuils manuels utilisés en attendant.';
+    return manual;
+  }
+
+  const avg = arr => arr.reduce((a,b)=>a+b,0) / arr.length;
+  const refFollowers = avg(refs.map(c=>c.followers));
+  const refEngagement = avg(refs.map(c=>c.engagement));
+  const refViews = avg(refs.map(c=>c.avgViews));
+
+  return {
+    followers: refFollowers * 0.5,
+    followersMax: Infinity,
+    viewsMin: refViews * 0.5,
+    engagement: refEngagement * 0.7,
+    adaptive: true, refFollowers, refEngagement, refViews, refCount: refs.length
+  };
+}
+
+function exportCSV(){
+  if(rawCreators.length === 0) return;
+  const cfg = readConfig();
+  const rows = [['Créateur','Handle','URL','Followers','Vérifié','Vues moy.','Likes moy.','Comm. moy.','Engagement %','Régularité','Activité','Score','Tier','Approuvé','Trouvé (x)','Termes source','Langue']];
+  rawCreators.forEach(c => {
+    const s = scoreCreator(c, cfg);
+    rows.push([c.displayName, c.handle, c.url, Math.round(c.followers), c.verified?'Oui':'Non', Math.round(c.avgViews),
+      Math.round(c.avgLikes), Math.round(c.avgComments), c.engagement.toFixed(2),
+      regularityLabel(c.regularity), activityLabel(c.activity, c.daysSincePost),
+      `${s.passed}/${s.total}`, TIER_LABEL[s.tier], c.approved?'Oui':'Non', c.timesFound || 1,
+      (c.sourceTerms||[]).join(' | '), c.probablyFR===true?'FR':c.probablyFR===false?'Autre':'?']);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'scout-influenceurs.csv';
+  a.click();
+}
+
+function renderStats(scored){
+  const total = scored.length;
+  const green = scored.filter(c => c._score.tier==='green').length;
+  const red = scored.filter(c => c._score.tier==='red').length;
+  const grey = scored.filter(c => c._score.tier==='grey').length;
+  const strip = document.getElementById('statsStrip');
+  strip.innerHTML = `
+    <div class="stat-card cyan"><div class="v">${total}</div><div class="l">Créateurs trouvés</div></div>
+    <div class="stat-card green"><div class="v">${green}</div><div class="l">🟢 Parfait</div></div>
+    <div class="stat-card red"><div class="v">${red}</div><div class="l">🔴 Moyen</div></div>
+    <div class="stat-card grey"><div class="v">${grey}</div><div class="l">⚪ Faible</div></div>
+  `;
+}
+
+function renderTable(){
+  const cfg = readConfig();
+  const sortBy = document.getElementById('sortBy').value;
+  let scored = rawCreators.map(c => ({ ...c, _score: scoreCreator(c, cfg), _quality: qualityScore(c, cfg) }));
+
+  const estimateBox = document.getElementById('estimateBox');
+  if(estimateBox && cfg.adaptive){
+    estimateBox.innerHTML = `📊 Score adaptatif actif — basé sur ${cfg.refCount} compte(s) de référence : ~${fmt(cfg.refFollowers)} followers, ${cfg.refEngagement.toFixed(1)}% engagement, ${fmt(cfg.refViews)} vues moy. Seuils appliqués : ${fmt(cfg.followers)} followers min, ${cfg.engagement.toFixed(1)}% engagement min, ${fmt(cfg.viewsMin)} vues min.`;
+  }
+
+  renderStats(scored);
+
+  let list = activeTier === 'all' ? scored : scored.filter(c => c._score.tier === activeTier);
+  if(frOnly) list = list.filter(c => c.probablyFR === true);
+  if(approvedOnly) list = list.filter(c => c.approved === true);
+  const searchQ = (document.getElementById('searchHandle')?.value || '').trim().toLowerCase();
+  if(searchQ) list = list.filter(c => c.handle.toLowerCase().includes(searchQ) || c.displayName.toLowerCase().includes(searchQ));
+
+  list.sort((a,b)=>{
+    if(sortBy === 'discovery') return (a.firstSeen||0) - (b.firstSeen||0);
+    if(sortBy === 'followers') return b.followers - a.followers;
+    if(sortBy === 'views') return b.avgViews - a.avgViews;
+    if(sortBy === 'engagement') return b.engagement - a.engagement;
+    return b._quality - a._quality;
+  });
+
+  document.getElementById('countLabel').textContent = `${list.length} affiché(s) sur ${rawCreators.length}`;
+
+  const grid = document.getElementById('grid');
+  if(list.length === 0){
+    const emptyMsg = rawCreators.length===0
+      ? "Lance une recherche depuis l'onglet Recherche pour voir des résultats ici."
+      : (activeTier==='green' ? "Aucun compte 🟢 Parfait pour l'instant. Clique sur \"Tous\" pour voir les autres, ou élargis ta recherche (mots-clés, followers min plus bas...)." : 'Aucun créateur ne correspond à ces critères.');
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1;"><div class="big">🔍</div>${emptyMsg}</div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(c => {
+    const m = getManual(c.id);
+    return `
+    <div class="card ${c._score.tier} ${c.approved ? 'approved' : ''}">
+      <div class="card-top">
+        <div class="creator">
+          ${c.avatar ? `<img class="avatar" src="${c.avatar}" referrerpolicy="no-referrer" onerror="this.style.visibility='hidden'">` : `<div class="avatar"></div>`}
+          <div>
+            <div class="cname"><a href="#" onclick="copyProfileLink('${c.handle}', this); return false;">${escapeHtml(c.displayName)}</a></div>
+            <div class="chandle">@${escapeHtml(c.handle)}</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          <span class="badge ${c._score.tier}">${TIER_LABEL[c._score.tier]} · ${c._score.passed}/${c._score.total}</span>
+          <span class="badge" style="background:rgba(47,230,223,.12);color:var(--cyan);">⭐ ${c._quality}/100</span>
+          ${c.approved ? '<span class="badge approved-badge">✅ Approuvé</span>' : ''}
+          ${c.tracked ? '<span class="badge" style="background:rgba(139,92,246,.14);color:#a78bfa;">📨 Suivi</span>' : ''}
+          ${c.isReference ? '<span class="badge" style="background:rgba(245,179,76,.14);color:var(--amber);">📌 Référence</span>' : ''}
+        </div>
+      </div>
+      ${lastNewIds.has(c.id) ? '<div class="hint" style="margin:-6px 0 6px;color:var(--cyan);">🆕 Nouveau dans cette recherche</div>' : c.timesFound > 1 ? `<div class="hint" style="margin:-6px 0 6px;">🔁 Retrouvé ${c.timesFound}× dans tes recherches</div>` : ''}
+      ${c.probablyFR === true ? '<div class="hint" style="margin:-6px 0 6px;">🇫🇷 Légendes probablement en français</div>' : c.probablyFR === false ? '<div class="hint" style="margin:-6px 0 6px;">🌍 Légendes probablement pas en français</div>' : ''}
+      <div class="stats-mini">
+        <div><span>Followers</span><b>${fmt(c.followers)}${c.verified ? ' ✔️' : ''}</b></div>
+        <div><span>Vues moy.${c.sampled < 3 ? ' ⚠️' : ''}</span><b>${fmt(c.avgViews)}</b></div>
+        <div><span>Likes moy.</span><b>${fmt(c.avgLikes)}</b></div>
+        <div><span>Engagement</span><b>${c.engagement.toFixed(2)}%</b></div>
+      </div>
+      ${c.sampled < 3 ? `<div class="hint" style="color:var(--amber);margin:-6px 0 10px;">⚠️ Basé sur seulement ${c.sampled} vidéo(s) trouvée(s) — possiblement son contenu le plus viral, pas sa moyenne réelle. Vérifie sur son profil, ou ajoute-le en "Compte de référence" et relance pour un échantillon plus fiable.</div>` : ''}
+      <div class="checklist">
+        <div class="check-item"><div class="ico ${regularityIco(c.regularity)}">${regularityGlyph(c.regularity)}</div>Régularité : ${regularityLabel(c.regularity)}</div>
+        <div class="check-item"><div class="ico ${activityIco(c.activity)}">${activityGlyph(c.activity)}</div>Activité : ${activityLabel(c.activity, c.daysSincePost)}</div>
+        ${(c.nicheRatio !== null && c.nicheRatio !== undefined) ? `<div class="check-item"><div class="ico ${c.nicheRatio>=0.5?'ok':c.nicheRatio>0?'warn':'ko'}">${c.nicheRatio>=0.5?'✓':c.nicheRatio>0?'~':'✕'}</div>Pertinence niche : ${Math.round(c.nicheRatio*100)}% de ses vidéos matchent tes mots-clés</div>` : ''}
+      </div>
+      <div class="checklist">
+        ${c._score.checks.map(ch => `
+          <div class="check-item"><div class="ico ${ch.ok?'ok':'ko'}">${ch.ok?'✓':'✕'}</div>${ch.label}</div>`).join('')}
+      </div>
+      <div class="checklist">
+        <div class="check-item" style="cursor:pointer;" onclick="toggleManual('${c.id}','proof')">
+          <div class="ico ${m.proof?'ok':'ko'}">${m.proof?'✓':'?'}</div>À vérifier toi-même : captures de campagnes passées
+        </div>
+        <div class="check-item" style="cursor:pointer;" onclick="toggleManual('${c.id}','replyTest')">
+          <div class="ico ${m.replyTest?'ok':'ko'}">${m.replyTest?'✓':'?'}</div>À vérifier toi-même : audience active (test réponse)
+        </div>
+      </div>
+      <button class="btn-ghost btn-sm" style="width:100%;margin-top:12px;" onclick="copyProfileLink('${c.handle}', this)">
+        📋 Copier le lien du profil
+      </button>
+      <button class="btn-ghost btn-sm approve-btn ${c.approved?'is-approved':''}" style="width:100%;margin-top:8px;" onclick="toggleApproved('${c.id}')">
+        ${c.approved ? '✅ Approuvé — cliquer pour annuler' : '☐ Marquer comme approuvé'}
+      </button>
+      <button class="btn-ghost btn-sm approve-btn ${c.tracked?'is-approved':''}" style="width:100%;margin-top:8px;" onclick="toggleTracked('${c.id}')">
+        ${c.tracked ? '📨 Dans le suivi — cliquer pour retirer' : '☐ Envoyer au suivi'}
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function regularityIco(r){ return r==='stable' ? 'ok' : r==='irrégulier' ? 'ko' : 'warn'; }
+function regularityGlyph(r){ return r==='stable' ? '✓' : r==='variable' ? '~' : r==='irrégulier' ? '⚠' : '?'; }
+function regularityLabel(r){
+  return { stable:'stable sur plusieurs vidéos', variable:'assez variable',
+    'irrégulier':'irrégulier (possible pic isolé)', insuffisant:'pas assez de vidéos pour juger' }[r] || r;
+}
+function activityIco(a){ return a==='active' ? 'ok' : a==='faible' ? 'ko' : 'warn'; }
+function activityGlyph(a){ return a==='active' ? '✓' : a==='modérée' ? '~' : a==='faible' ? '⚠' : '?'; }
+function activityLabel(a, days){
+  if(a==='inconnue') return 'date non disponible';
+  if(days===0) return "aujourd'hui";
+  if(a==='active') return `récente (il y a ${days}j)`;
+  if(a==='modérée') return `moyenne (il y a ${days}j)`;
+  return `faible (il y a ${days}j)`;
+}
+
+function googleLink(handle){
+  return `https://www.google.com/search?q=${encodeURIComponent('"tiktok.com/@'+handle+'"')}`;
+}
+
+async function copyProfileLink(handle, btnEl){
+  const url = `https://www.tiktok.com/@${handle}`;
+  try{
+    await navigator.clipboard.writeText(url);
+    const original = btnEl.textContent;
+    btnEl.textContent = '✅ Lien copié — colle-le dans la barre d\'adresse';
+    setTimeout(() => { btnEl.textContent = original; }, 2200);
+  }catch(e){
+    prompt('Copie ce lien manuellement :', url);
+  }
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+renderStats([]);
+</script>
+</body>
+</html>
